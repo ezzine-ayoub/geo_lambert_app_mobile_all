@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_websocket_main"
+              name="WebSocket"
+              sequence="100"
+              web_icon="websocket,static/description/icon.png"/>
+
+    <!-- Configuration Menu (parent) -->
+    <menuitem id="menu_websocket_configuration"
+              name="Configuration"
+              parent="menu_websocket_main"
+              sequence="10"/>
+
+</odoo>

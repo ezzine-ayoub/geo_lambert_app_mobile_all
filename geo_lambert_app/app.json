@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "geo_lambert",
+    "slug": "geo_lambert",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/iconss.png",
+    "scheme": "geolambert",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/iconss.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.ayoub.ezzine.geo_lambert"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/iconss.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "147f2613-646a-43f7-babb-8451b931937a"
+      }
+    }
+  }
+}
