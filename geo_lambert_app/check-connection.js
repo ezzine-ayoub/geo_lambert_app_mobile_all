@@ -16,6 +16,7 @@ app.use(bodyParser.urlencoded({ limit: "2gb", extended: true }));
 // endpoint يستقبل الإشعارات من Odoo
 app.post("/websocket", (req, res) => {
     const { channel, data } = req.body;
+    // console.log(`📨 Reçu depuis Odoo - Channel: ${channel}, Data:`, JSON.stringify(data, null, 2));
     console.log(`📨 Reçu depuis Odoo - Channel: ${channel}, Data:`, data);
 
     // Parser les données si c'est un string JSON

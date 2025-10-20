@@ -1,7 +1,7 @@
 // WebSocket Service - Geo Lambert Project Management
 import { getCurrentWebSocketUrl } from "./config/configService";
 import io, { Socket } from "socket.io-client";
-import projectService from "@/services/projectService";
+import projectCategoryService from "@/services/projectCategoryService";
 import { authService } from "@/services/authService";
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -123,7 +123,6 @@ class WebSocketService {
             if (!this.authuser) {
                 return;
             }
-
             const privateTaskChannel = `${this.name_project}_tasks_user_id_${this.authuser}`;
 
             this.subscribe(privateTaskChannel, async (data: any) => {
@@ -139,9 +138,7 @@ class WebSocketService {
 
                     // Traiter selon le type d'événement
                     const eventType = parsedTask.event_type || 'updated';
-
                     let success = false;
-
                     switch (eventType) {
                         case 'created':
                         case 'updated':
@@ -149,11 +146,14 @@ class WebSocketService {
                         case 'started':
                         case 'stopped':
                         case 'state_changed':
-                            success = await projectService.insertOrUpdateProject(parsedTask);
+                            // Recharger les catégories depuis SQLite pour avoir les dernières données
+                            const categoriesResponse = await projectCategoryService.getProjectCategories();
+                            success = categoriesResponse.success;
                             break;
                         case 'deleted':
-                            success = await projectService.deleteProject(parsedTask.id);
-                            // Ne logger que si la suppression a réellement eu lieu (pas de doublon)
+                            // Pour les suppressions, aussi recharger les catégories
+                            const deleteCategoriesResponse = await projectCategoryService.getProjectCategories();
+                            success = deleteCategoriesResponse.success;
                             if (success) {
                                 console.log(`🗑️ Projet ${parsedTask.id} supprimé (task deleted)`);
                             }
@@ -189,9 +189,9 @@ class WebSocketService {
             
             this.subscribe(privateProjectChannel, async (data: any) => {
                 try {
+                    console.log(JSON.stringify(JSON.parse(data), null, 2));
                     let parsedProject = typeof data === 'string' ? JSON.parse(data) : data;
                     const eventType = parsedProject.event_type || 'updated';
-
                     let success = false;
 
                     switch (eventType) {
@@ -205,22 +205,26 @@ class WebSocketService {
                                     console.log(`   de la tâche ${parsedProject.task_id_with_deleted_expense}`);
                                 }
                             }
-                            success = await projectService.insertOrUpdateProject(parsedProject);
+                            // 💾 INSERT OR REPLACE le projet dans SQLite avec sa catégorie
+                            success = await projectCategoryService.insertOrUpdateProject(parsedProject);
+                            if (success) {
+                                console.log(`✅ Projet ${parsedProject.id} mis à jour via WebSocket`);
+                            } else {
+                                console.warn(`⚠️ Échec mise à jour projet ${parsedProject.id} via WebSocket`);
+                            }
                             break;
                         case 'deleted':
                             // ✅ Vérifier si c'est une suppression de tâche ou de projet
                             if (parsedProject.deleted_task_id) {
                                 // Suppression d'une tâche individuelle
-                                success = await projectService.deleteTask(parsedProject.id, parsedProject.deleted_task_id);
-                                if (success) {
-                                    console.log(`🗑️ Tâche ${parsedProject.deleted_task_id} supprimée du projet ${parsedProject.id}`);
-                                }
+                                console.log(`🗑️ Tâche ${parsedProject.deleted_task_id} supprimée du projet ${parsedProject.id}`);
+                                // Recharger les catégories pour mettre à jour la tâche
+                                const categoriesResponse = await projectCategoryService.getProjectCategories();
+                                success = categoriesResponse.success;
                             } else {
                                 // Suppression du projet entier
-                                success = await projectService.deleteProject(parsedProject.id);
-                                if (success) {
-                                    console.log(`🗑️ Projet ${parsedProject.id} supprimé (project deleted)`);
-                                }
+                                console.log(`🗑️ Projet ${parsedProject.id} supprimé (project deleted)`);
+                                success = await projectCategoryService.deleteProject(parsedProject.id);
                             }
                             break;
                         default:
@@ -241,6 +245,201 @@ class WebSocketService {
             subscribeToProjects();
         } else {
             this.pendingSubscriptions.push(subscribeToProjects);
+        }
+    }
+    /**
+     * Souscription aux mises à jour de dépenses de caisse
+     * ✅ Channel PRIVÉ - case_id + user_id
+     */
+    onCashboxExpenseUpdate(callback: (data: any) => void): void {
+        const subscribeToCashboxExpenses = () => {
+            if (!this.authuser) {
+                console.log('⚠️ Pas d\'authentification pour les dépenses de caisse');
+                return;
+            }
+
+            // Récupérer le case_id depuis l'auth
+            const getUserInfo = async () => {
+                try {
+                    const user = await authService.getCurrentUser();
+                    if (!user || !user.case_id) {
+                        console.error('❌ case_id manquant dans user auth');
+                        return null;
+                    }
+                    return user;
+                } catch (error) {
+                    console.error('❌ Erreur récupération user info:', error);
+                    return null;
+                }
+            };
+
+            getUserInfo().then(user => {
+                if (!user) return;
+
+                // ✅ Canal privé: geo_lambert_expense_caise_{case_id}_{user_id}
+                const privateCashboxChannel = `${this.name_project}_expense_caise_${user.case_id}_${this.authuser}`;
+                console.log('📡 Souscription au canal dépenses de caisse:', privateCashboxChannel);
+
+                this.subscribe(privateCashboxChannel, async (data: any) => {
+                    try {
+                        console.log('📥 Données dépense de caisse reçues:', typeof data === 'string' ? 'string' : 'object');
+                        
+                        let parsedData;
+                        if (typeof data === 'string') {
+                            parsedData = JSON.parse(data);
+                        } else {
+                            parsedData = data;
+                        }
+
+                        callback(parsedData);
+
+                    } catch (error) {
+                        console.error('❌ Erreur traitement dépense de caisse socket:', error);
+                        console.error('📊 Données brutes:', data);
+                    }
+                });
+            });
+        };
+
+        // ✅ Attendre l'authentification avant de s'abonner
+        if (this.authuser) {
+            subscribeToCashboxExpenses();
+        } else {
+            this.pendingSubscriptions.push(subscribeToCashboxExpenses);
+        }
+    }
+
+    /**
+     * Souscription aux mises à jour de mois de dépenses
+     * ✅ Channel PRIVÉ - case_id + user_id
+     */
+    onExpenseMonthUpdate(callback: (data: any) => void): void {
+        const subscribeToExpenseMonths = () => {
+            if (!this.authuser) {
+                console.log('⚠️ Pas d\'authentification pour les mois de dépenses');
+                return;
+            }
+
+            // Récupérer le case_id depuis l'auth
+            const getUserInfo = async () => {
+                try {
+                    const user = await authService.getCurrentUser();
+                    if (!user || !user.case_id) {
+                        console.error('❌ case_id manquant dans user auth');
+                        return null;
+                    }
+                    return user;
+                } catch (error) {
+                    console.error('❌ Erreur récupération user info:', error);
+                    return null;
+                }
+            };
+
+            getUserInfo().then(user => {
+                if (!user) return;
+
+                // ✅ Canal privé: geo_lambert_expense_month_caise_{case_id}_{user_id}
+                const privateMonthChannel = `${this.name_project}_expense_month_caise_${user.case_id}_${this.authuser}`;
+                console.log('📡 Souscription au canal mois de dépenses:', privateMonthChannel);
+
+                this.subscribe(privateMonthChannel, async (data: any) => {
+                    try {
+                        console.log('📥 Données mois de dépenses reçues:', typeof data === 'string' ? 'string' : 'object');
+                        
+                        let parsedData;
+                        if (typeof data === 'string') {
+                            parsedData = JSON.parse(data);
+                        } else {
+                            parsedData = data;
+                        }
+
+                        callback(parsedData);
+
+                    } catch (error) {
+                        console.error('❌ Erreur traitement mois de dépenses socket:', error);
+                        console.error('📊 Données brutes:', data);
+                    }
+                });
+            });
+        };
+
+        // ✅ Attendre l'authentification avant de s'abonner
+        if (this.authuser) {
+            subscribeToExpenseMonths();
+        } else {
+            this.pendingSubscriptions.push(subscribeToExpenseMonths);
+        }
+    }
+
+    /**
+     * Souscription aux mises à jour de catégories de projets
+     * ⚠️ Channel PUBLIC - Pas besoin d'authentification
+     */
+    onCategoryUpdate(callback: (category: any) => void): void {
+        const subscribeToCategories = () => {
+            // ✅ Channel PUBLIC pour les catégories
+            const publicCategoryChannel = `${this.name_project}_category_projects`;
+
+            console.log('📡 Souscription au channel catégories:', publicCategoryChannel);
+
+            this.subscribe(publicCategoryChannel, async (data: any) => {
+                try {
+                    let parsedCategory;
+                    if (typeof data === 'string') {
+                        parsedCategory = JSON.parse(data);
+                    } else {
+                        parsedCategory = data;
+                    }
+
+                    console.log('📥 Catégorie reçue via WebSocket:', {
+                        id: parsedCategory.id,
+                        name: parsedCategory.name,
+                        event_type: parsedCategory.event_type,
+                        project_count: parsedCategory.project_ids?.length || 0
+                    });
+
+                    const eventType = parsedCategory.event_type || 'updated';
+
+                    let success = false;
+
+                    switch (eventType) {
+                        case 'created':
+                        case 'updated':
+                        case 'sync':
+                            // 💾 INSERT OR REPLACE dans SQLite
+                            success = await projectCategoryService.insertOrUpdateCategory(parsedCategory);
+                            if (success) {
+                                console.log(`✅ Catégorie ${parsedCategory.id} (${parsedCategory.name}) - INSERT OR REPLACE réussi`);
+                            }
+                            break;
+                        case 'deleted':
+                            // 🗑️ DELETE de SQLite
+                            success = await projectCategoryService.deleteCategory(parsedCategory.id);
+                            if (success) {
+                                console.log(`🗑️ Catégorie ${parsedCategory.id} supprimée de SQLite`);
+                            }
+                            break;
+                        default:
+                            console.log('⚠️ Type d\'événement catégorie non géré:', eventType);
+                            success = true;
+                    }
+
+                    if (success) {
+                        callback(parsedCategory);
+                    } else {
+                        console.error('❌ Échec traitement catégorie depuis socket:', parsedCategory.id || 'ID inconnu');
+                    }
+                } catch (error) {
+                    console.error('❌ Erreur traitement catégorie socket:', error);
+                }
+            });
+        };
+
+        // ✅ Souscription PUBLIQUE - Pas besoin d'attendre l'auth
+        if (this.socket && this.socket.connected) {
+            subscribeToCategories();
+        } else {
+            this.pendingPublicSubscriptions.push(subscribeToCategories);
         }
     }
     onConnectionStatusChange(callback: (connected: boolean) => void): void {
@@ -291,6 +490,11 @@ class WebSocketService {
             console.log('🔒 Nettoyage du canal privé suppression dépenses:', privateExpenseDeleteChannel);
             this.socket.off(privateExpenseDeleteChannel);
 
+            // Nettoyage canal catégories (legacy privé)
+            const privateCategoryChannel = `${this.name_project}_categories_user_id_${this.authuser}`;
+            console.log('🔒 Nettoyage du canal privé catégories (legacy):', privateCategoryChannel);
+            this.socket.off(privateCategoryChannel);
+
             // Nettoyage canaux legacy
             console.log('🔒 Nettoyage du canal privé commandes (legacy):', privateCommandChannel);
             this.socket.off(privateCommandChannel);
@@ -313,7 +517,20 @@ class WebSocketService {
             console.log('⚠️ Pas d\'utilisateur authentifié, pas de canaux privés à nettoyer');
         }
 
+        // Nettoyer les canaux privés dépenses de caisse et mois si utilisateur authentifié
+        if (this.authuser) {
+            // Note: On ne peut pas récupérer facilement le case_id ici de manière synchrone
+            // mais on peut nettoyer le pattern général
+            console.log(`🔒 Nettoyage des canaux privés dépenses de caisse pour user ${this.authuser}`);
+            console.log(`🔒 Nettoyage des canaux privés mois de dépenses pour user ${this.authuser}`);
+            // On nettoie tous les canaux qui matchent le pattern
+            // Note: socket.io ne permet pas de lister tous les channels, donc on fait un best effort
+        }
+
         // Nettoyer les canaux publics
+        console.log(`📡 Nettoyage du canal public catégories: ${this.name_project}_category_aprojects`);
+        this.socket.off(`${this.name_project}_category_aprojects`);
+
         console.log(`📡 Nettoyage du canal public messages Geo Lambert app: message_app_${this.name_project}`);
         this.socket.off(`message_app_${this.name_project}`);
 

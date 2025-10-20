@@ -3,13 +3,13 @@ import React, { useEffect, useState } from 'react';
 import {Alert, Platform} from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from "@expo/vector-icons";
 import webSocketService from '@/services/webSocketService';
-import projectService from '@/services/projectService';
+import cashboxService from '@/services/cashboxService';
+import { authService } from '@/services/authService';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -45,6 +45,75 @@ export default function TabLayout() {
             console.log('📋 Mise à jour Task reçue:', task.id, 'Type:', task.event_type);
 
         });
+        webSocketService.onCategoryUpdate(async (category)=>{
+            console.log(category)
+        })
+
+      // 💸 DÉPENSES DE CAISSE - Canal privé: geo_lambert_expense_caise_{case_id}_{user_id}
+      webSocketService.onCashboxExpenseUpdate(async (expenseData) => {
+        try {
+          console.log('💸 Événement dépense de caisse WebSocket:', {
+            event_type: expenseData.event_type || 'unknown',
+            expense_id: expenseData.id,
+            expense_move_type: expenseData.expense_move_type,
+            solde_amount: expenseData.solde_amount,
+            task_name: expenseData.task_id && expenseData.task_id.length > 0 
+              ? expenseData.task_id[0].name 
+              : 'N/A'
+          });
+
+          // ✅ Mise à jour directe du SQLite depuis le payload WebSocket
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser?.employee_id) {
+            const employeeId = parseInt(currentUser.employee_id);
+            console.log('📡 Mise à jour directe SQLite depuis payload WebSocket...');
+            
+            // ✅ Utiliser updateCashboxFromWebSocket au lieu de forceRefreshCashbox
+            const result = await cashboxService.updateCashboxFromWebSocket(employeeId, expenseData);
+            
+            if (result.success) {
+              console.log('✅ Cashbox SQLite + vue mis à jour depuis WebSocket');
+            } else {
+              console.warn('⚠️ Échec mise à jour directe:', result.message);
+            }
+          }
+
+        } catch (error) {
+          console.error('❌ Erreur traitement event WebSocket cashbox:', error);
+        }
+      });
+
+      // 📅 MOIS DE DÉPENSES - Canal privé: geo_lambert_expense_month_caise_{case_id}_{user_id}
+      webSocketService.onExpenseMonthUpdate(async (monthData) => {
+        try {
+          console.log('📅 Événement mois de dépenses WebSocket:', {
+            event_type: monthData.event_type || 'unknown',
+            month_id: monthData.id,
+            month_name: monthData.name || monthData.display_name,
+            caisse_id: monthData.caisse_id ? monthData.caisse_id[0] : 'N/A'
+          });
+
+          // ✅ Mise à jour directe du SQLite depuis le payload WebSocket
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser?.case_id) {
+            const caseId = currentUser.case_id;
+            console.log('📡 Mise à jour directe SQLite mois depuis payload WebSocket...');
+            
+            // ✅ Utiliser updateExpenseMonthFromWebSocket
+            const { expenseAccountService } = await import('@/services/expenseAccountService');
+            const result = await expenseAccountService.updateExpenseMonthFromWebSocket(caseId, monthData);
+            
+            if (result.success) {
+              console.log('✅ Mois SQLite + vue mis à jour depuis WebSocket');
+            } else {
+              console.warn('⚠️ Échec mise à jour directe mois:', result.message);
+            }
+          }
+
+        } catch (error) {
+          console.error('❌ Erreur traitement event WebSocket mois:', error);
+        }
+      });
 
       // 📡 STATUT DE CONNEXION
       webSocketService.onConnectionStatusChange((connected) => {
@@ -105,6 +174,32 @@ export default function TabLayout() {
               }}
           />
 
+          <Tabs.Screen
+              name="details-solde"
+              options={{
+                  title: 'Solde',
+                  tabBarIcon: ({ color, focused }) => (
+                      <Ionicons
+                          name={focused ? 'wallet' : 'wallet-outline'}
+                          size={26}
+                          color={color}
+                      />
+                  ),
+              }}
+          />
+          <Tabs.Screen
+              name="expense-months"
+              options={{
+                  title: 'Mes Mois',
+                  tabBarIcon: ({ color, focused }) => (
+                      <Ionicons
+                          name={focused ? 'calendar' : 'calendar-outline'}
+                          size={26}
+                          color={color}
+                      />
+                  ),
+              }}
+          />
           <Tabs.Screen
               name="profile"
               options={{

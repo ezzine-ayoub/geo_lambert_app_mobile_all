@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserAuth, useCurrentUser } from '@/contexts/UserAuthContext';
-import * as SQLite from 'expo-sqlite';
-import projectService from "@/services/projectService";
+import projectService from "@/services/projectCategoryService";
+import cashboxService from "@/services/cashboxService";
 
 export default function ProfileScreen() {
   const { logout, refreshSession, error, isLoading } = useUserAuth();
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
   const handleClearDatabase = async () => {
     Alert.alert(
       '⚠️ Vider le cache',
-      'Êtes-vous sûr de vouloir vider toutes les données en cache ?\n\nCette action supprimera:\n• Tous les projets en cache\n• Toutes les catégories de dépenses\n\nVous devrez rafraîchir les données depuis le serveur.',
+      'Êtes-vous sûr de vouloir vider toutes les données en cache ?\n\nCette action supprimera:\n• Tous les projets en cache\n• Toutes les données de caisse\n• Toutes les catégories de dépenses\n\nVous devrez rafraîchir les données depuis le serveur.',
       [
         {
           text: 'Annuler',
@@ -97,14 +97,19 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await projectService.clearProjects()
+              // Vider le cache projets
+              await projectService.clearProjects();
+              
+              // Vider le cache cashbox
+              await cashboxService.clearCashboxCache();
+              
               Alert.alert(
                 '✅ Cache vidé',
-                'Toutes les données en cache ont été supprimées avec succès.\n\nRafraîchissez les données depuis l\'écran d\'accueil.',
+                'Toutes les données en cache ont été supprimées avec succès:\n\n• Projets\n• Caisse\n\nRafraîchissez les données depuis les écrans concernés.',
                 [{ text: 'OK' }]
               );
               
-              console.log('🎉 Base de données nettoyée avec succès');
+              console.log('🎉 Base de données nettoyée avec succès (projets + cashbox)');
               
             } catch (error) {
               console.error('❌ Erreur lors du nettoyage de la base de données:', error);
@@ -192,10 +197,7 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
-            
-            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-              <Ionicons name="pencil" size={16} color="#2563eb" />
-            </TouchableOpacity>
+
           </View>
 
           {/* User Details */}
@@ -219,73 +221,21 @@ export default function ProfileScreen() {
                   <Text style={styles.detailValue}>{user.city}</Text>
                 </View>
               )}
-              
-              {user.is_admin && (
-                <View style={styles.adminBadge}>
-                  <Ionicons name="shield-checkmark" size={14} color="#ffffff" />
-                  <Text style={styles.adminText}>Administrateur</Text>
-                </View>
-              )}
             </View>
           )}
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Compte</Text>
-          
-          <ProfileItem
-            icon="person-circle-outline"
-            title="Modifier le profil"
-            subtitle="Informations personnelles"
-            onPress={handleEditProfile}
-          />
-          
-          <ProfileItem
-            icon="settings-outline"
-            title="Paramètres"
-            subtitle="Préférences de l'application"
-            onPress={handleSettings}
-          />
-          
-          <ProfileItem
-            icon="notifications-outline"
-            title="Notifications"
-            subtitle="Gérer les notifications"
-            onPress={() => Alert.alert('Notifications', 'Fonctionnalité à venir')}
-          />
-        </View>
 
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Support</Text>
-          
-          <ProfileItem
-            icon="help-circle-outline"
-            title="Aide & Support"
-            subtitle="Contactez notre équipe"
-            onPress={handleHelp}
-          />
-          
+
           <ProfileItem
             icon="trash-outline"
             title="Vider le cache"
             subtitle="Supprimer les données locales"
             onPress={handleClearDatabase}
           />
-          
-          <ProfileItem
-            icon="document-text-outline"
-            title="Conditions d'utilisation"
-            subtitle="Termes et conditions"
-            onPress={() => Alert.alert('CGU', 'Fonctionnalité à venir')}
-          />
-          
-          <ProfileItem
-            icon="shield-outline"
-            title="Politique de confidentialité"
-            subtitle="Protection de vos données"
-            onPress={() => Alert.alert('Confidentialité', 'Fonctionnalité à venir')}
-          />
+
         </View>
 
         {/* Error Display */}
@@ -330,7 +280,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 20,
+    paddingTop: 140,
+    paddingBottom: 20,
   },
   header: {
     backgroundColor: '#2563eb',
@@ -338,18 +289,19 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -381,17 +333,17 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     backgroundColor: '#ffffff',
-    margin: 20,
-    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 24,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#f0f9ff',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -416,17 +368,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitials: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
   initialsText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#ffffff',
+    letterSpacing: 1,
   },
   statusBadge: {
     position: 'absolute',
@@ -450,10 +410,11 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
     marginBottom: 4,
+    letterSpacing: 0.2,
   },
   userEmail: {
     fontSize: 14,
@@ -463,16 +424,18 @@ const styles = StyleSheet.create({
   companyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#93c5fd',
   },
   companyText: {
-    fontSize: 12,
-    color: '#2563eb',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#1e40af',
+    fontWeight: '700',
     marginLeft: 4,
   },
   editButton: {
@@ -505,51 +468,36 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     fontWeight: '500',
   },
-  adminBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  adminText: {
-    fontSize: 12,
-    color: '#ffffff',
-    fontWeight: 'bold',
-    marginLeft: 4,
-  },
   menuSection: {
     backgroundColor: '#ffffff',
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   profileItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
@@ -559,13 +507,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
   },
   profileItemContent: {
     flex: 1,
@@ -584,12 +534,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   errorText: {
     color: '#dc2626',
@@ -598,25 +553,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoutSection: {
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginBottom: 30,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
     borderColor: '#fecaca',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#dc2626',
     marginLeft: 8,
+    letterSpacing: 0.3,
   },
   footer: {
     alignItems: 'center',

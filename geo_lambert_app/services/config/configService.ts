@@ -26,123 +26,45 @@ export interface ServerConfigResponse {
     api_version: string;
 }
 
-// ==================== FONCTIONS DE GESTION DE CONFIGURATION ====================
-
 /**
  * 💰 Payloads pour la gestion des dépenses
  */
 export const EXPENSE_PAYLOADS = {
-  /**
-   * Crée une nouvelle dépense
-   */
-  createExpense: (
-    credentials: PayloadCredentials, 
-    taskId: number, 
-    expenseData: {
-      user_id: number;
-      expense_type_id: number;
-      expense_category_id: number;
-      amount: number;
-      description: string;
-      expense_date?: string;
-    }
-  ): RPCPayload => ({
-    operation: 'rpc',
-    db: credentials.db,
-    username: credentials.username,
-    password: credentials.password,
-    model: 'task.expense',
-    method: 'create',
-    kwargs: {
-      vals: {
-        user_id: expenseData.user_id,
-        task_id: taskId,
-        expense_category_id: expenseData.expense_category_id,
-        expense_type_id: expenseData.expense_type_id,
-        amount: expenseData.amount,
-        description: expenseData.description,
-        expense_date: expenseData.expense_date || new Date().toISOString().split('T')[0]
-      }
-    }
-  })
+    /**
+     * Crée une nouvelle dépense
+     */
+    createExpense: (
+        credentials: PayloadCredentials,
+        taskId: number,
+        expenseData: {
+            user_id: number;
+            expense_type_id: number;
+            expense_category_id: number;
+            amount: number;
+            description: string;
+            expense_date?: string;
+        }
+    ): RPCPayload => ({
+        operation: 'rpc',
+        db: credentials.db,
+        username: credentials.username,
+        password: credentials.password,
+        model: 'hr.expense.account.move',
+        method: 'create',
+        kwargs: {
+            vals: {
+                employee_id: 1,
+                task_id: taskId,
+                expense_category_id: expenseData.expense_category_id,
+                expense_type_id: expenseData.expense_type_id,
+                total_amount: expenseData.amount,
+                description: expenseData.description,
+                date: expenseData.expense_date || new Date().toISOString().split('T')[0],
+                expense_move_type : 'spent'
+            }
+        }
+    })
 };
-
-
-/**
- * 📋 Payloads pour la gestion des projets
- */
-export const PROJECT_PAYLOADS = {
-  /**
-   * Récupère tous les projets avec leurs tâches et dépenses
-   */
-  getAllProjects: (credentials: PayloadCredentials): RPCPayload => ({
-    operation: 'rpc',
-    db: credentials.db,
-    username: credentials.username,
-    password: credentials.password,
-    model: 'project.project',
-    method: 'search_read',
-    kwargs: {
-      domain: [['active','=',true]],
-      fields: [
-        'name',
-        'project_type',
-        'partner_id',
-        'date_start',
-        'date',
-        'task_ids',
-        'numero',
-        'write_date',
-        'create_date'
-      ],
-      replaceToObject: [{
-        'partner_id': {
-          'res.partner': ['name', 'street']
-        },
-        'task_ids': {
-          'project.task': [
-            'name',
-            'state',
-            'partner_id',
-            'user_ids',
-            'expense_ids',
-            'timer_start',
-            'timer_pause',
-            // "advance_amount",
-            // "advance_date"
-          ]
-        },
-        'task_ids.partner_id': {
-          'res.partner': ['name', 'street']
-        },
-        'task_ids.user_ids': {
-          'res.users': ['name']
-        },
-        'task_ids.expense_ids': {
-          'task.expense': [
-            'amount',
-            'expense_date',
-            'expense_type_id',
-            'expense_category_id',
-            'project_id',
-            'task_id',
-            'currency_id',
-            'display_name',
-            "description"
-          ]
-        },
-          'task_ids.expense_ids.expense_category_id':{
-            "expense.category":['name',"display_name"],
-          },
-          'task_ids.expense_ids.expense_type_id':{
-            "expense.type":['name',"display_name"],
-          }
-      }]
-    }
-  }),
-
-};
-
 
 /**
  * 🔍 Récupère la configuration du serveur
@@ -151,9 +73,9 @@ export const fetchServerConfig = async (serverUrl: string): Promise<ServerConfig
     try {
         const cleanUrl = CONFIG_UTILS.formatServerUrl(serverUrl);
         const configUrl = `${cleanUrl}/config`;
-        
+
         console.log('🔍 Récupération config serveur:', configUrl);
-        
+
         const response = await fetch(configUrl, {
             method: 'POST',
             headers: {
@@ -162,27 +84,26 @@ export const fetchServerConfig = async (serverUrl: string): Promise<ServerConfig
             },
             body: JSON.stringify({}),
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const config = await response.json();
-        
+
         console.log('✅ Configuration serveur récupérée:', config);
-        
+
         if (!config.success) {
             throw new Error('Configuration serveur invalide');
         }
-        
+
         if (!config.form || !config.form.baseUrl) {
             throw new Error('BaseURL manquant dans la configuration');
         }
-        
+
         return config;
-        
-    }
-    catch (error) {
+
+    } catch (error) {
         console.error('❌ Erreur récupération config serveur:', error);
         throw error;
     }
@@ -196,12 +117,12 @@ export const updateServerConfig = async (baseUrl: string, wsUrl: string) => {
         DYNAMIC_CONFIG.API_URL = `${baseUrl}/odoo-rpc`;
         DYNAMIC_CONFIG.WS_URL = wsUrl;
         DYNAMIC_CONFIG.isInitialized = true;
-        
+
         console.log('✅ Configuration Geo Lambert mise à jour:', {
             API_URL: DYNAMIC_CONFIG.API_URL,
             WS_URL: DYNAMIC_CONFIG.WS_URL
         });
-        
+
         // Sauvegarder la configuration
         await AsyncStorage.setItem('geo_lambert_server_config', JSON.stringify({
             baseUrl,
@@ -209,9 +130,8 @@ export const updateServerConfig = async (baseUrl: string, wsUrl: string) => {
             apiUrl: DYNAMIC_CONFIG.API_URL,
             configured_at: Date.now()
         }));
-        
-    }
-    catch (error) {
+
+    } catch (error) {
         console.error('❌ Erreur lors de la mise à jour de la config Geo Lambert:', error);
     }
 };
@@ -225,7 +145,7 @@ export const updateServerConfigFromServerResponse = async (serverUrl: string, ba
         DYNAMIC_CONFIG.API_URL = `${baseUrl}/odoo-rpc`;
         DYNAMIC_CONFIG.WS_URL = wsUrl;
         DYNAMIC_CONFIG.isInitialized = true;
-        
+
         console.log("=============== CONFIGURATION URLS ===============");
         console.log("Server URL (input):", serverUrl);
         console.log("Base URL (from config):", baseUrl);
@@ -233,7 +153,7 @@ export const updateServerConfigFromServerResponse = async (serverUrl: string, ba
         console.log("Final API URL:", DYNAMIC_CONFIG.API_URL);
         console.log("Final WS URL:", DYNAMIC_CONFIG.WS_URL);
         console.log("=================================================");
-        
+
         // Sauvegarder la configuration complète
         await AsyncStorage.setItem('geo_lambert_server_config', JSON.stringify({
             serverUrl,
@@ -242,7 +162,7 @@ export const updateServerConfigFromServerResponse = async (serverUrl: string, ba
             apiUrl: DYNAMIC_CONFIG.API_URL,
             configured_at: Date.now()
         }));
-        
+
     } catch (error) {
         console.error('❌ Erreur lors de la mise à jour de la config Geo Lambert:', error);
     }
@@ -333,10 +253,13 @@ export interface CustomAuthResponse {
     success: boolean;
     message: string;
     user_info: {
+        case_id: number;
+        employee_id: string;
         id: number;
         uid: number;
         user_name: string;
         user_login: string;
+        balance:number;
         active: boolean;
         email: string;
         phone: string;
@@ -389,7 +312,6 @@ export const AUTH_PAYLOADS = {
 };
 
 
-
 // ==================== FONCTIONS UTILITAIRES ====================
 
 export const CONFIG_UTILS = {
@@ -419,13 +341,13 @@ export const CONFIG_UTILS = {
      */
     formatServerUrl: (url: string): string => {
         if (!url) return '';
-        
+
         url = url.trim();
-        
+
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
         }
-        
+
         return url.replace(/\/$/, '');
     },
 
