@@ -1,3 +1,5 @@
 from . import project_task
 from . import account_analytic_line
-from . import task_expense
+from . import message_follower
+from . import hr_expense_account_move
+from . import project_category
