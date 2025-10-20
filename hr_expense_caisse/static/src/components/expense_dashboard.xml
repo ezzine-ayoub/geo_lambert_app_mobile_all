@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <t t-name="hr_expense_caisse.ExpenseDashboard" owl="1">
+        <div class="hr_expense_caisse_dashboard">
+            <div class="expense_dashboard_modern">
+                <!-- Dashboard Content - CORRECTION: Affichage direct sans loader -->
+                <div class="dashboard_content">
+                    <!-- Détails mensuels (si mois sélectionné) -->
+                    <div t-if="state.selectedMonthDetails" class="mb-4">
+                        <div class="month_details_card">
+                            <div class="card_header">
+                                <h5 class="card_title">
+                                    <i class="fa fa-calendar-o"/>
+                                    <t t-esc="state.selectedMonthDetails.name || 'Mois sélectionné'"/>
+                                </h5>
+                            </div>
+                            <div class="card_content">
+                                <div class="month_stats">
+                                    <div class="stat_item start">
+                                        <div class="stat_icon">
+                                            <i class="fa fa-play"/>
+                                        </div>
+                                        <div class="stat_content">
+                                            <div class="stat_label">Solde initial</div>
+                                            <div class="stat_value">
+                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.solde_initial, 1)"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat_item current">
+                                        <div class="stat_icon">
+                                            <i class="fa fa-calculator"/>
+                                        </div>
+                                        <div class="stat_content">
+                                            <div class="stat_label">Solde actuel</div>
+                                            <div class="stat_value">
+                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.sold, 1)"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat_item end">
+                                        <div class="stat_icon">
+                                            <i class="fa fa-stop-circle-o"/>
+                                        </div>
+                                        <div class="stat_content">
+                                            <div class="stat_label">Solde final</div>
+                                            <div class="stat_value">
+                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.solde_final, 1)"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards principales -->
+                    <div class="kpi_grid">
+                        <div class="kpi_card balance">
+                            <div class="kpi_icon">
+                                <i class="fa fa-money"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Solde Actuel</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalBalance, 1)"/>
+                                </div>
+                                <div class="kpi_description">
+                                    <t t-if="hasActiveFilters()">Solde filtré</t>
+                                    <t t-elif="state.selectedCaisses.length === 0">Toutes caisses</t>
+                                    <t t-elif="state.selectedCaisses.length === 1">Caisse sélectionnée</t>
+                                    <t t-else="1"><t t-esc="state.selectedCaisses.length"/> caisses</t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="kpi_card expenses">
+                            <div class="kpi_icon">
+                                <i class="fa fa-arrow-down"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Total Dépensé</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalExpenses, 1)"/>
+                                </div>
+                                <div class="kpi_description">
+                                    <t t-if="hasActiveFilters()">Montant filtré</t>
+                                    <t t-else="1">Montant des Dépenses</t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="kpi_card replenishments">
+                            <div class="kpi_icon">
+                                <i class="fa fa-arrow-up"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Total Alimentation</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalReplenishments, 1)"/>
+                                </div>
+                                <div class="kpi_description">
+                                    <t t-if="hasActiveFilters()">Montant filtré</t>
+                                    <t t-else="1">Montant des Alimentations</t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indicateurs rapides -->
+                    <!-- <div class="quick_indicators">
+                        <div class="indicator_item">
+                            <div class="indicator_label">Caisses</div>
+                            <div class="indicator_value"><t t-esc="state.allCaisses.length"/></div>
+                        </div>
+                        <div class="indicator_item">
+                            <div class="indicator_label">Mois</div>
+                            <div class="indicator_value"><t t-esc="state.allMonths.length"/></div>
+                        </div>
+                        <div class="indicator_item">
+                            <div class="indicator_label">Mouvements</div>
+                            <div class="indicator_value"><t t-esc="state.expenseMovements.length"/></div>
+                        </div>
+                        <div t-if="state.filteredCount !== undefined" class="indicator_item">
+                            <div class="indicator_label">Filtrés</div>
+                            <div class="indicator_value"><t t-esc="state.filteredCount"/></div>
+                        </div>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

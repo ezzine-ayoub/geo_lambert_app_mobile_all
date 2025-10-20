@@ -1,0 +1,666 @@
+/* ==============================================
+   DASHBOARD MODERNE ET SIMPLE POUR ODOO
+   ============================================== */
+
+/* Variables CSS pour cohérence - SCOPE LIMITÉ AU MODULE */
+.hr_expense_caisse_dashboard {
+    --primary-color: #714B67;
+    --secondary-color: #875A7B;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --white: #ffffff;
+    --border-radius: 12px;
+    --border-radius-small: 8px;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    /* --box-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15); */
+    --transition: all 0.3s ease;
+}
+
+/* Container pour l'intégration dans les vues list - SCOPED */
+.hr_expense_caisse_dashboard_container {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+/* Container principal - SCOPED */
+.hr_expense_caisse_dashboard .expense_dashboard_modern {
+    padding: 12px;
+    background: var(--light-gray);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin-bottom: 0;
+}
+
+/* Header du dashboard - SCOPED */
+.hr_expense_caisse_dashboard .dashboard_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--medium-gray);
+}
+
+.hr_expense_caisse_dashboard .header_left {
+    flex: 1;
+}
+
+.hr_expense_caisse_dashboard .dashboard_title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hr_expense_caisse_dashboard .dashboard_title .fa {
+    color: var(--secondary-color);
+}
+
+.hr_expense_caisse_dashboard .dashboard_subtitle {
+    font-size: 12px;
+    color: var(--dark-gray);
+    margin: 0;
+    font-weight: 400;
+}
+
+.hr_expense_caisse_dashboard .header_actions {
+    display: flex;
+    gap: 12px;
+}
+
+.hr_expense_caisse_dashboard .btn_refresh {
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--border-radius-small);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: var(--box-shadow);
+}
+
+.hr_expense_caisse_dashboard .btn_refresh:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+/* Loading state - SCOPED */
+.hr_expense_caisse_dashboard .loading_container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.hr_expense_caisse_dashboard .loading_spinner {
+    font-size: 28px;
+    color: var(--primary-color);
+    margin-bottom: 12px;
+}
+
+.hr_expense_caisse_dashboard .loading_text {
+    font-size: 16px;
+    color: var(--dark-gray);
+    margin: 0;
+}
+
+/* Section filtres - SCOPED */
+.hr_expense_caisse_dashboard .filters_section {
+    background: var(--white);
+    border-radius: var(--border-radius-small);
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.hr_expense_caisse_dashboard .filter_group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+}
+
+.hr_expense_caisse_dashboard .filter_item {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+    flex: 1;
+}
+
+.hr_expense_caisse_dashboard .filter_label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hr_expense_caisse_dashboard .filter_select {
+    padding: 6px 10px;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius-small);
+    font-size: 12px;
+    background: var(--white);
+    color: #495057;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.hr_expense_caisse_dashboard .filter_select:focus,
+.hr_expense_caisse_dashboard .filter_select:hover {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(113, 75, 103, 0.1);
+}
+
+.hr_expense_caisse_dashboard .filter_actions {
+    display: flex;
+    gap: 8px;
+    align-items: end;
+}
+
+.hr_expense_caisse_dashboard .btn_clear {
+    background: var(--white);
+    color: var(--danger-color);
+    border: 2px solid var(--danger-color);
+    padding: 6px 10px;
+    border-radius: var(--border-radius-small);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hr_expense_caisse_dashboard .btn_clear:hover {
+    background: var(--danger-color);
+    color: var(--white);
+}
+
+/* Filtres actifs - SCOPED */
+.hr_expense_caisse_dashboard .active_filters {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--medium-gray);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hr_expense_caisse_dashboard .filter_badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hr_expense_caisse_dashboard .filter_badge.caisse {
+    background: rgba(23, 162, 184, 0.1);
+    color: var(--info-color);
+    border: 1px solid var(--info-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.month {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+/* Détails mensuels - SCOPED */
+.hr_expense_caisse_dashboard .month_details_card {
+    background: var(--white);
+    border-radius: var(--border-radius-small);
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-left: 3px solid var(--info-color);
+    overflow: hidden;
+}
+
+.hr_expense_caisse_dashboard .month_details_card .card_header {
+    background: linear-gradient(135deg, var(--info-color), var(--primary-color));
+    color: var(--white);
+    padding: 8px 12px;
+}
+
+.hr_expense_caisse_dashboard .month_details_card .card_title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hr_expense_caisse_dashboard .month_details_card .card_content {
+    padding: 10px;
+}
+
+.hr_expense_caisse_dashboard .month_stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.hr_expense_caisse_dashboard .stat_item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: var(--border-radius-small);
+    transition: var(--transition);
+}
+
+.hr_expense_caisse_dashboard .stat_item.start {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid var(--warning-color);
+}
+
+.hr_expense_caisse_dashboard .stat_item.current {
+    background: rgba(113, 75, 103, 0.1);
+    border: 1px solid var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .stat_item.end {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .stat_item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow);
+}
+
+.hr_expense_caisse_dashboard .stat_icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: var(--white);
+}
+
+.hr_expense_caisse_dashboard .stat_item.start .stat_icon {
+    background: var(--warning-color);
+}
+
+.hr_expense_caisse_dashboard .stat_item.current .stat_icon {
+    background: var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .stat_item.end .stat_icon {
+    background: var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .stat_content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hr_expense_caisse_dashboard .stat_label {
+    font-size: 11px;
+    color: var(--dark-gray);
+    font-weight: 500;
+}
+
+.hr_expense_caisse_dashboard .stat_value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+/* KPI Cards principales - SCOPED */
+.hr_expense_caisse_dashboard .kpi_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.hr_expense_caisse_dashboard .kpi_card {
+    background: var(--white);
+    border-radius: var(--border-radius-small);
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* .hr_expense_caisse_dashboard .kpi_card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--box-shadow-hover);
+} */
+
+.hr_expense_caisse_dashboard .kpi_card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    transition: var(--transition);
+}
+
+.hr_expense_caisse_dashboard .kpi_card.balance::before {
+    background: var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_card.expenses::before {
+    background: var(--danger-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_card.replenishments::before {
+    background: var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--white);
+    flex-shrink: 0;
+}
+
+.hr_expense_caisse_dashboard .kpi_card.balance .kpi_icon {
+    background: var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_card.expenses .kpi_icon {
+    background: var(--danger-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_card.replenishments .kpi_icon {
+    background: var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .kpi_content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.hr_expense_caisse_dashboard .kpi_label {
+    font-size: 11px;
+    color: var(--dark-gray);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.hr_expense_caisse_dashboard .kpi_value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+}
+
+.hr_expense_caisse_dashboard .kpi_description {
+    font-size: 10px;
+    color: var(--dark-gray);
+    font-style: italic;
+}
+
+/* Indicateurs rapides - SCOPED */
+.hr_expense_caisse_dashboard .quick_indicators {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 10px;
+    background: var(--white);
+    border-radius: var(--border-radius-small);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    flex-wrap: wrap;
+    margin-bottom: 0;
+}
+
+.hr_expense_caisse_dashboard .indicator_item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 100px;
+}
+
+.hr_expense_caisse_dashboard .indicator_label {
+    font-size: 10px;
+    color: var(--dark-gray);
+    font-weight: 500;
+    text-align: center;
+}
+
+.hr_expense_caisse_dashboard .indicator_value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* Responsive design - SCOPED */
+@media (max-width: 768px) {
+    .hr_expense_caisse_dashboard .expense_dashboard_modern {
+        padding: 12px;
+    }
+    
+    .hr_expense_caisse_dashboard .dashboard_header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .hr_expense_caisse_dashboard .filter_group {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .hr_expense_caisse_dashboard .filter_item {
+        min-width: 100%;
+    }
+    
+    .hr_expense_caisse_dashboard .kpi_grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .hr_expense_caisse_dashboard .kpi_card {
+        padding: 16px;
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .hr_expense_caisse_dashboard .month_stats {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .hr_expense_caisse_dashboard .quick_indicators {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hr_expense_caisse_dashboard .dashboard_title {
+        font-size: 20px;
+    }
+    
+    .hr_expense_caisse_dashboard .dashboard_subtitle {
+        font-size: 13px;
+    }
+    
+    .hr_expense_caisse_dashboard .kpi_value {
+        font-size: 20px;
+    }
+    
+    .hr_expense_caisse_dashboard .stat_value {
+        font-size: 16px;
+    }
+    
+    .hr_expense_caisse_dashboard .kpi_icon {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    
+    .hr_expense_caisse_dashboard .stat_icon {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+}
+
+/* Animations - SCOPED */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.hr_expense_caisse_dashboard .filters_section {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.hr_expense_caisse_dashboard .month_details_card {
+    animation: slideIn 0.6s ease-out;
+}
+
+.hr_expense_caisse_dashboard .kpi_card {
+    animation: fadeInUp 0.7s ease-out;
+}
+
+.hr_expense_caisse_dashboard .kpi_card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.hr_expense_caisse_dashboard .kpi_card:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.hr_expense_caisse_dashboard .quick_indicators {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+/* Focus styles pour accessibilité - SCOPED */
+.hr_expense_caisse_dashboard .filter_select:focus,
+.hr_expense_caisse_dashboard .btn_refresh:focus,
+.hr_expense_caisse_dashboard .btn_clear:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Indicateur de synchronisation - SCOPED */
+.hr_expense_caisse_dashboard .sync-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+}
+
+.hr_expense_caisse_dashboard .sync-indicator.error {
+    background: #dc3545;
+}
+
+.hr_expense_caisse_dashboard .sync-indicator.warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+/* Animation de chargement pour la synchronisation - SCOPED */
+.hr_expense_caisse_dashboard .sync-loading {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Print styles - SCOPED */
+@media print {
+    .hr_expense_caisse_dashboard .expense_dashboard_modern {
+        background: white;
+        padding: 0;
+    }
+    
+    .hr_expense_caisse_dashboard .header_actions {
+        display: none;
+    }
+    
+    .hr_expense_caisse_dashboard .filters_section {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .hr_expense_caisse_dashboard .kpi_card,
+    .hr_expense_caisse_dashboard .month_details_card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        break-inside: avoid;
+    }
+}

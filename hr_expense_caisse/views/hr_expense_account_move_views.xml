@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Vue spéciale pour les transactions avec recherche par date -->
+  <record id="hr_expense_account_move_tree_with_search" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.tree.with.search</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" edit="0" create="1">
+        <field name="expense_move_type" invisible="True"/>
+        <field name="name" string="Référence"/>
+        <field name="caisse_mois_id" options="{'no_create': True, 'no_create_edit': True}" />
+        <field name="date" string="Date" options='{"datepicker": {"format": "d/MM/y H:m"}}'/>
+        <!-- <field name="caisse_manager_id" widget="many2one_avatar_user" string="Caissier"/> -->
+        <field name="expense_move_type" string="Type" widget="badge" decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'"/>
+        <field name="total_amount" string="Montant" widget="monetary" sum="Total"/>
+        <!-- <field name="validate_by_administrator" string="Validation Admin" widget="badge" decoration-success="validate_by_administrator == 'valid'" decoration-warning="validate_by_administrator == 'pending'"/> -->
+        <field name="description" string="Description" optional="show"/>
+        <!-- <field name="payment_id" string="Paiement" invisible="expense_move_type == 'spent'" optional="hide"/> -->
+        <!-- <button name="action_validate_by_administrator" type="object" groups="hr_expense_caisse.group_expense_caisse_administrator" invisible="validate_by_administrator == 'valid'" string="Valider" class="btn-success" icon="fa-check"/> -->
+      </list>
+    </field>
+  </record>
+
+  <!-- Vue de recherche SIMPLIFIÉE SANS filtres de date complexes -->
+  <record id="hr_expense_account_move_search_with_date" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.search.with.date</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <search>
+        <!-- Champ de recherche principal -->
+        <field name="name" string="Référence" filter_domain="[('name','ilike',self)]"/>
+        <!-- <field name="caisse_manager_id" string="Responsable"/> -->
+        <field name="expense_account_id" string="Caissier"/>
+        <field name="date" string="Date"/>
+
+        <!-- Filtres rapides -->
+        <filter string="Alimentation" name="alimentation" domain="[('expense_move_type','=','replenish')]"/>
+        <filter string="Dépenses" name="expenses" domain="[('expense_move_type','=','spent')]"/>
+        <!-- <filter string="En attente de validation" name="pending_validation" domain="[('validate_by_administrator','=','envoyee')]"/> -->
+        <!-- <filter string="Validés" name="validated" domain="[('validate_by_administrator','=','valid')]"/> -->
+        <!-- <filter string="Invalidés" name="invalidated" domain="[('validate_by_administrator','=','invalide')]"/> -->
+        <!-- <filter string="Debug - Un seul élément" name="debug_single" domain="[('id','&gt;',0)]" context="{'limit': 1}"/> -->
+        <filter string="Mouvements Actifs" name="active_movements" domain="[('total_amount','&gt;',0)]"/>
+        <filter string="Avec Pièces Jointes" name="with_attachments" domain="[('attachment_ids','!=',False)]"/>
+        <filter string="Filtre Dashboard" name="dashboard_filter" domain="[]" invisible="1"/>
+
+        <separator/>
+
+        <!-- Groupements -->
+        <group expand="0" string="Grouper par">
+          <filter string="Type" name="group_by_type" context="{'group_by': 'expense_move_type'}"/>
+          <!-- <filter string="Utilisateur" name="group_by_user" context="{'group_by': 'user_id'}"/> -->
+          <filter string="Date" name="group_by_date" context="{'group_by': 'date:day'}"/>
+          <filter string="Mois" name="group_by_month" context="{'group_by': 'date:month'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- Action pour les transactions avec vue de recherche -->
+  <record id="action_hr_expense_account_move_with_search" model="ir.actions.act_window">
+    <field name="name">Transactions de Caisse</field>
+    <field name="res_model">hr.expense.account.move</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="hr_expense_account_move_search_with_date"/>
+    <field name="context">{}</field>
+  </record>
+
+  <record id="hr_expense_account_move_search" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.search</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <search>
+        <!-- Champs de recherche -->
+        <field name="name" string="Référence" filter_domain="[('name','ilike',self)]"/>
+        <!-- <field name="caisse_manager_id" string="Responsable"/> -->
+        <field name="expense_account_id" string="Caisse" filter_domain="[('expense_account_id','=',self)]"/>
+        <field name="caisse_mois_id" string="Mois"/>
+        <field name="employee_id" string="Employé"/>
+        <field name="date" string="Date"/>
+
+        <!-- Filtres rapides -->
+        <filter string="Alimentation" name="replenishments" domain="[('expense_move_type','=','replenish')]"/>
+        <filter string="Dépenses" name="expenses" domain="[('expense_move_type','=','spent')]"/>
+        <!-- <filter string="En attente de validation" name="pending_validation" domain="[('validate_by_administrator','=','envoyee')]"/> -->
+        <!-- <filter string="Validés" name="validated" domain="[('validate_by_administrator','=','valid')]"/> -->
+        <!-- <filter string="Invalidés" name="invalidated" domain="[('validate_by_administrator','=','invalide')]"/> -->
+        <!-- <filter string="Debug - Un seul élément" name="debug_single" domain="[('id','&gt;',0)]" context="{'limit': 1}"/> -->
+        <filter string="Mouvements Actifs" name="active_movements" domain="[('total_amount','&gt;',0)]"/>
+        <filter string="Avec Pièces Jointes" name="with_attachments" domain="[('attachment_ids','!=',False)]"/>
+        <filter string="Filtre Dashboard" name="dashboard_filter" domain="[]" invisible="1"/>
+
+        <separator/>
+
+        <!-- Filtres par mois -->
+        <filter string="Ce Mois" name="this_month" domain="[('date','&gt;=',datetime.datetime.now().strftime('%Y-%m-01'))]"/>
+        <filter string="Mois Dernier" name="last_month" domain="[('date','&gt;=',(datetime.datetime.now() - relativedelta(months=1)).strftime('%Y-%m-01')), ('date','&lt;',datetime.datetime.now().strftime('%Y-%m-01'))]"/>
+
+        <separator/>
+
+        <!-- Groupements -->
+        <group expand="0" string="Grouper par">
+          <filter string="Mois" name="group_by_month" context="{'group_by': 'caisse_mois_id'}"/>
+          <filter string="Caisse" name="group_by_caisse" context="{'group_by': 'expense_account_id'}"/>
+          <filter string="Employé" name="group_by_employee" context="{'group_by': 'employee_id'}"/>
+          <!-- <filter string="Responsable" name="group_by_user" context="{'group_by': 'caisse_manager_id'}"/> -->
+          <filter string="Type" name="group_by_type" context="{'group_by': 'expense_move_type'}"/>
+          <filter string="Date" name="group_by_date" context="{'group_by': 'date:day'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <record id="hr_expense_account_move_tree" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.tree</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <list js_class="expense_spending_dashboard_tree" decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'">
+        <field name="name" />
+        <field name="expense_account_id" optional="hide" />
+        <field name="caisse_mois_id" optional="hide" options="{'no_create': True, 'no_create_edit': True}" />
+        <field name="date" />
+        <field name="employee_id" optional="show" />
+        <field name="user_id" readonly="1" optional="hide" />
+        <field name="expense_category_id" optional="show" />
+        <field name="expense_type_id" optional="show" />
+        <field name="designation" optional="show" />
+        <!-- <field name="caisse_manager_id" optional="hide" /> -->
+
+        <field name="total_reconstitution" invisible="total_reconstitution == 0" decoration-bf="2" sum="Total Alimentation" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+        <field name="total_deponse" invisible="total_deponse == 0" decoration-bf="2" sum="Total Dépense" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+        <field name="solde_amount" optional="hide" string="Solde" invisible="expense_move_type in ['replenish','spent']" decoration-bf="2" sum="Solde Total" options="{'currency_field': 'currency_id'}" widget="monetary" readonly="1" decoration-info="solde_amount &gt;= 0" decoration-warning="solde_amount &lt; 0" />
+        <!-- Champ de débogage temporaire -->
+        <field name="expense_move_type" string="Type Debug" optional="hide" />
+        <!-- <field name="validate_by_administrator" widget="badge" decoration-success="validate_by_administrator == 'valid'" decoration-danger="validate_by_administrator == 'invalide'" invisible="expense_move_type == 'replenish'" decoration-warning="validate_by_administrator == 'envoyee'" decoration-info="validate_by_administrator == 'brouillon'"/> -->
+        <field name="currency_id" column_invisible="1"/>
+        <field name="expense_move_type" column_invisible="1" />
+        <!-- <field name="nbr_attachment_ids" string="Pièces Jointes" /> -->
+      </list>
+    </field>
+  </record>
+
+  <record id="hr_expense_account_move_form" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.form</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <!-- <button name="action_validate_by_administrator" type="object" groups="hr_expense_caisse.group_expense_caisse_administrator" invisible="validate_by_administrator in ['brouillon','valid','invalide'] or expense_move_type == 'replenish'" string="Validé par Administrateur" class="btn-success"/> -->
+          <!-- <button name="action_invalidate_by_administrator" type="object" groups="hr_expense_caisse.group_expense_caisse_administrator" invisible="validate_by_administrator in ['brouillon','valid','invalide'] or expense_move_type == 'replenish'" string="Ne pas Valide" class="btn-danger"/> -->
+          <!-- <field name="validate_by_administrator" widget="statusbar" /> -->
+          <!-- <field name="validate_by_administrator" options="{'clickable':1}" widget="statusbar" groups="hr_expense_caisse.group_expense_caisse_administrator"/> -->
+          <!-- <field name="validate_by_administrator" options="{'clickable':0,'readonly':1}" widget="statusbar" groups="hr_expense_caisse.group_expense_caisse_caisse_manager"/> -->
+        </header>
+        <sheet>
+          <!-- Section titre avec balance à droite -->
+          <div class="oe_title">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <label for="name"/>
+                <h1>
+                  <field name="name" />
+                </h1>
+              </div>
+              <!-- Balance affichée comme une image/badge en haut à droite -->
+              <div class="o_expense_balance_container" style="text-align: right; margin-top: 5px;">
+                <div class="badge badge-pill badge-info o_expense_balance" style="font-size: 16px; padding: 10px 15px; background-color: #17a2b8; color: white; border-radius: 25px;">
+                  Solde Actuel :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <!-- <i class="fa fa-money" style="margin-right: 5px;"/> -->
+                  <field name="balance" class="o_field_monetary" style="font-weight: bold;"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <group>
+            <group>
+              <field name="expense_move_type" invisible="1"/>
+              <field name="task_id" domain="[('user_ids','in',user_id)]"/>
+              <!-- <field name="designation" /> -->
+              <field name="project_id" />
+              <field name="expense_category_id"/>
+              <field name="expense_type_id" domain="[('category_id', '=', expense_category_id), ('active', '=', True)]" options="{'no_create': True, 'no_create_edit': True}"/>
+            </group>
+
+            <group>
+              <field name="date" options='{"datepicker": {"format": "d/MM/y HH:mm"}}'/>
+              <field name="expense_account_id" domain="[('user_id','=','user_id')]" groups="hr_expense_caisse.group_expense_caisse_caisse_manager" />
+              <field name="expense_account_id" groups="hr_expense_caisse.group_expense_caisse_administrator" />
+              <field name="employee_id" readonly="1" />
+              <field name="user_id" readonly="1" invisible="1" />
+              <!-- <field name="caisse_manager_id" /> -->
+              <field name="caisse_mois_id" invisible="1"/>
+
+              <!-- <field name="project_manager_id" widget="many2one_avatar_user"/> -->
+              <label for="total_amount" string="Montant Dépensé" />
+              <field nolabel="1" name="total_amount" required="1" />
+            </group>
+          </group>
+
+          <div>
+            <field name="description" placeholder="Observation..." />
+          </div>
+          <!-- <div style="text-align: right;">
+            <button name="action_envoyee" type="object" invisible="validate_by_administrator in ['envoyee','valid'] or expense_move_type == 'replenish' " string="Envoyé pour validation" class="btn btn-warning"/>
+          </div> -->
+        </sheet>
+        <div class="o_attachment_preview o_center_attachment"/>
+        <chatter/>
+      </form>
+    </field>
+  </record>
+
+  <record id="action_view_hr_expense_account_move_spending" model="ir.actions.act_window">
+    <field name="name">Expenses</field>
+    <field name="res_model">hr.expense.account.move</field>
+    <field name="view_mode">list,form</field>
+    <field name="context">{'default_expense_move_type': 'spent'}</field>
+    <field name="domain">[]</field>
+    <field name="search_view_id" ref="hr_expense_account_move_search"/>
+  </record>
+
+  <record id="action_view_hr_expense_account_move_spending_tree" model="ir.actions.act_window.view">
+    <field name="sequence" eval="1"/>
+    <field name="view_mode">list</field>
+    <field name="view_id" ref="hr_expense_account_move_tree"/>
+    <field name="act_window_id" ref="action_view_hr_expense_account_move_spending"/>
+  </record>
+  <record id="action_view_hr_expense_account_move_spending_form" model="ir.actions.act_window.view">
+    <field name="sequence" eval="1"/>
+    <field name="view_mode">form</field>
+    <field name="view_id" ref="hr_expense_account_move_form"/>
+    <field name="act_window_id" ref="action_view_hr_expense_account_move_spending"/>
+  </record>
+
+  <record id="hr_expense_account_move_replenish_form" model="ir.ui.view">
+    <field name="name">hr.expense.account.move.replenish.form</field>
+    <field name="model">hr.expense.account.move</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <div class="oe_title">
+            <label for="name"/>
+            <h1>
+              <field name="name" />
+            </h1>
+          </div>
+          <group>
+            <field name="expense_move_type" invisible="1"/>
+            <field name="expense_account_id" invisible="1" />
+            <field name="partner_id" invisible="1" />
+            <field name="expense_account_id"/>
+            <field name="employee_id"  />
+            <field name="user_id" readonly="1"  />
+            <field name="caisse_mois_id" invisible="1"/>
+            <!-- <field name="task_id"/> -->
+            <field name="date" options='{"datepicker": {"format": "d/MM/y HH:mm"}}'/>
+            <!-- <field name="caisse_manager_id" readonly="1" /> -->
+            <field name="total_amount" required="1" />
+            <field name="attachment_ids" width="80" widget="many2many_binary"/>
+            <!-- <field name="validate_by_administrator" readonly="1"/> -->
+          </group>
+          <div>
+            <field name="description" placeholder="Notes..." />
+          </div>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+
+  <menuitem id="menu_hr_expense_account_move_spending" name="Expense Spending" sequence="10" parent="menu_hr_expense_caisse" action="action_view_hr_expense_account_move_spending"/>
+
+</odoo>
+
+

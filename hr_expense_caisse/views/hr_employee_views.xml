@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Vue formulaire héritée de hr.employee -->
+  <record id="view_employee_form_expense_caisse" model="ir.ui.view">
+    <field name="name">hr.employee.form.expense.caisse</field>
+    <field name="model">hr.employee</field>
+    <field name="inherit_id" ref="hr.view_employee_form"/>
+    <field name="arch" type="xml">
+      <!-- Ajouter un onglet pour la caisse -->
+      <xpath expr="//notebook" position="inside">
+        <page string="Caisse" name="caisse">
+          <group>
+            <group>
+              <field name="caisse_id"/>
+            </group>
+            <group>
+              <field name="total_depenses" widget="monetary"/>
+              <field name="total_alimentations" widget="monetary"/>
+            </group>
+          </group>
+          <group string="Créer une caisse" invisible="caisse_id != False">
+            <button name="action_create_employee_caisse" string="Créer une caisse pour cet employé" type="object" class="oe_highlight" icon="fa-plus"/>
+          </group>
+        </page>
+      </xpath>
+
+      <!-- Ajouter des boutons intelligents -->
+      <xpath expr="//div[@name='button_box']" position="inside">
+        <button name="action_view_employee_expenses" type="object" class="oe_stat_button" icon="fa-money-bill-wave" invisible="nbr_depenses == 0">
+          <field name="nbr_depenses" widget="statinfo" string="Dépenses"/>
+        </button>
+
+        <button name="action_view_employee_alimentations" type="object" class="oe_stat_button" icon="fa-coins" invisible="nbr_alimentations == 0 ">
+          <field name="nbr_alimentations" widget="statinfo" string="Alimentations"/>
+        </button>
+      </xpath>
+    </field>
+  </record>
+</odoo>

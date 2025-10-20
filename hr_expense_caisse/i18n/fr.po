@@ -1,0 +1,935 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* hr_expense_caisse
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0+e-20230224\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-04 16:43+0000\n"
+"PO-Revision-Date: 2025-06-04 16:43+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid ""
+"<i class=\"fa fa-calendar mr-2\"/>\n"
+"                                                Filtrer les transactions par période"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid ""
+"<i class=\"fa fa-info-circle mr-1\"/>\n"
+"                                                        <span attrs=\"{'invisible': [('date_from', '=', False), ('date_to', '=', False)]}\">Filtrage actif : </span>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_kanban
+msgid ""
+"<i class=\"fa fa-money fa-lg text-primary mr-2\"/>\n"
+"                                        <span class=\"text-muted small\">Solde disponible</span>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "<i class=\"fa fa-times mr-1\"/>Effacer"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_kanban
+msgid ""
+"<small class=\"text-muted\">\n"
+"                                    <i class=\"fa fa-clock-o mr-1\"/>Cliquez pour voir les détails\n"
+"                                </small>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "<small>Solde Disponible</small>"
+msgstr "Solde Disponible"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "<small>Total Dépensé</small>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "<small>Total Reconstitué</small>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid ""
+"<span attrs=\"{'invisible': ['|', ('date_from', '=', False), ('date_to', "
+"'=', False)]}\"> au </span>"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_needaction
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_needaction
+msgid "Action Needed"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_ids
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_ids
+msgid "Activities"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_exception_decoration
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_state
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_state
+msgid "Activity State"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_type_icon
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_type_icon
+msgid "Activity Type Icon"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Actualiser"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:res.groups,name:hr_expense_caisse.group_expense_caisse_administrator
+msgid "Administrator"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__analytic_distribution
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__analytic_distribution
+msgid "Analytic"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__analytic_precision
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__analytic_precision
+msgid "Analytic Precision"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_attachment_count
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_attachment_count
+msgid "Attachment Count"
+msgstr "Nombre de Pièces Jointes"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__attachment_ids
+msgid "Attachments"
+msgstr "Pièces Jointess"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Au"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__balance
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__balance
+msgid "Balance in (DH)"
+msgstr "Solde en (DH)"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__expense_account_id
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+msgid "Caisse"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:res.groups,name:hr_expense_caisse.group_expense_caisse_caisse_manager
+msgid "Caisse Manager"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Caisse sélectionnée"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.ui.menu,name:hr_expense_caisse.menu_hr_expense_account
+msgid "Caisses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Chargement des données..."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Configuration"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__create_uid
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__create_date
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__status__critical
+msgid "Critical"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.actions.act_window,help:hr_expense_caisse.action_view_hr_expense_account
+msgid "Créez votre première caisse de dépenses !"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__currency_id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__currency_id
+msgid "Currency"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.ui.menu,name:hr_expense_caisse.menu_hr_expense_dashboard
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__date
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Date"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__date_from
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Date de début"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__date_from
+msgid "Date de début pour filtrer les transactions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__date_to
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Date de fin"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__date_to
+msgid "Date de fin pour filtrer les transactions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__description
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Description"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__display_name
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__display_name
+msgid "Display Name"
+msgstr "Nom d'affichage"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Du"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Dépense"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+msgid "Dépenses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Effacer"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+#, python-format
+msgid "Effacer le filtre"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__user_id
+msgid "Employé"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__status__empty
+msgid "Empty"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__expense_account_move_ids
+msgid "Expense Account Moves"
+msgstr "Dépenses"
+
+#. module: hr_expense_caisse
+#: model:ir.model,name:hr_expense_caisse.model_hr_expense_account
+#: model:ir.ui.menu,name:hr_expense_caisse.menu_hr_expense_caisse
+msgid "Expense Caisse"
+msgstr "Dépenses Caisse"
+
+#. module: hr_expense_caisse
+#: model:ir.model,name:hr_expense_caisse.model_hr_expense_account_move
+msgid "Expense Move"
+msgstr "Transaction de Dépenses"
+
+#. module: hr_expense_caisse
+#: model:ir.ui.menu,name:hr_expense_caisse.menu_hr_expense_account_move_spending
+msgid "Expense Spending"
+msgstr "Dépenses"
+
+#. module: hr_expense_caisse
+#: model:ir.actions.act_window,name:hr_expense_caisse.action_view_hr_expense_account_move_spending
+msgid "Expenses"
+msgstr "Dépenses"
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Filtrer par caisse..."
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Filtrer par caisse:"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_follower_ids
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_follower_ids
+msgid "Followers"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_partner_ids
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_partner_ids
+msgid "Followers (Partners)"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__activity_type_icon
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.actions.server,name:hr_expense_caisse.close_preperty_server
+msgid "Genarate Caisse"
+msgstr "Générer une caisse"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+msgid "Grouper par"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account.py:0
+#, python-format
+msgid "Génial!"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.actions.act_window,help:hr_expense_caisse.action_view_hr_expense_account
+msgid ""
+"Gérez facilement vos caisses de projet et personnelles avec un système de "
+"suivi moderne."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__has_message
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__has_message
+msgid "Has Message"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__status__healthy
+msgid "Healthy"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__id
+msgid "ID"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_exception_icon
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_exception_icon
+msgid "Icon"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__activity_exception_icon
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__message_needaction
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__message_has_error
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__message_has_sms_error
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__message_has_error
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Informations"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_account_journal__is_exp_account
+msgid "Is Expense Account"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_is_follower
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_is_follower
+msgid "Is Follower"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model,name:hr_expense_caisse.model_account_journal
+msgid "Journal"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account.py:0
+#, python-format
+msgid "La caisse a été ajoutée avec succès"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account____last_update
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move____last_update
+msgid "Last Modified on"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__last_transaction_date
+msgid "Last Transaction"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__write_uid
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__write_date
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__status__warning
+msgid "Low Balance"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_main_attachment_id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_main_attachment_id
+msgid "Main Attachment"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__journal_id
+msgid "Main Caisse"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_has_error
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_has_error
+msgid "Message Delivery error"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_ids
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_ids
+msgid "Messages"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__min_balance
+msgid "Min Balance of Caisse in (DH)"
+msgstr "Solde minimum en (DH)"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+msgid "Mois"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Montant"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Montant des apports"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Montant des dépenses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#, python-format
+msgid "Montant total des dépenses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#, python-format
+msgid "Montant total des reconstitutions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.actions.act_window,name:hr_expense_caisse.action_view_hr_expense_account_move
+#: model:ir.ui.menu,name:hr_expense_caisse.menu_hr_expense_move
+msgid "Mouvements"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__expense_move_type
+msgid "Move Type"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__my_activity_date_deadline
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__name
+msgid "Name"
+msgstr "nom"
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#, python-format
+msgid "New"
+msgstr "Nouveau"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_date_deadline
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_summary
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_summary
+msgid "Next Activity Summary"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_type_id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_type_id
+msgid "Next Activity Type"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_replenish_form
+msgid "Notes..."
+msgstr "Remarques..."
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_needaction_counter
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_needaction_counter
+msgid "Number of Actions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_has_error_counter
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_has_error_counter
+msgid "Number of errors"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__message_needaction_counter
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__message_needaction_counter
+msgid "Number of messages which requires an action"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__message_has_error_counter
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__message_has_error_counter
+msgid "Number of messages with delivery error"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_form
+msgid "Observation..."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__payment_id
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Paiement"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__partner_id
+msgid "Partner-related data of the user"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__payment_method_line_id
+msgid "Payment Method"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__type__personal
+msgid "Personal"
+msgstr "Personnel"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__project_id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__project_id
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__type__project
+msgid "Project"
+msgstr "Projet"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__project_manager_id
+#: model:res.groups,name:hr_expense_caisse.group_expense_caisse_project_manager
+msgid "Project Manager"
+msgstr "Caissier"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Reconstituer Solde"
+msgstr "Alimentation Caisse"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Reconstitution"
+msgstr "Alimentation"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+msgid "Reconstitutions"
+msgstr "Alimentation"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__name
+msgid "Reference"
+msgstr "Référence"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__partner_id
+msgid "Related Partner"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account_move__expense_move_type__replenish
+msgid "Replenishment"
+msgstr "Alimentation"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__user_id
+msgid "Responsible"
+msgstr "Comptable / Caissier"
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__activity_user_id
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__activity_user_id
+msgid "Responsible User"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Référence"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Réinitialiser les filtres de date"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Résumé Financier"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__message_has_sms_error
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account__type__shared
+msgid "Shared"
+msgstr "Partagé"
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Solde Total"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#, python-format
+msgid "Solde total des caisses sélectionnéesSolde total de toutes vos caisses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields.selection,name:hr_expense_caisse.selection__hr_expense_account_move__expense_move_type__spent
+msgid "Spending"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Statistiques"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__status
+msgid "Status"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__activity_state
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__activity_state
+msgid ""
+"Status based on activities\n"
+"Overdue: Due date is already passed\n"
+"Today: Activity date is today\n"
+"Planned: Future activities."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Sélectionnez la date de début"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Sélectionnez la date de fin"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Total"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree
+msgid "Total Amount"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_tree
+msgid "Total Balances"
+msgstr "Soldes Total"
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Total Dépensé"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Total Reconstitué"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__total_replenished
+msgid "Total Replenished"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__total_spent
+msgid "Total Spent"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__total_amount
+msgid "Total in (DH)"
+msgstr "Total en (DH)"
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "Toutes vos caisses"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Transactions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__filtered_expense_account_move_ids
+msgid "Transactions Filtrées"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.actions.act_window,name:hr_expense_caisse.action_hr_expense_account_move_with_search
+msgid "Transactions de Caisse"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__type
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Type"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__activity_exception_decoration
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__activity_exception_decoration
+msgid "Type of the exception activity on record."
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__user_ids
+msgid "Users"
+msgstr "Utilisateurs"
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_search_with_date
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_move_tree_with_search
+msgid "Utilisateur"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model_terms:ir.ui.view,arch_db:hr_expense_caisse.hr_expense_account_form
+msgid "Voir les Transactions"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account__website_message_ids
+#: model:ir.model.fields,field_description:hr_expense_caisse.field_hr_expense_account_move__website_message_ids
+msgid "Website Messages"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account__website_message_ids
+#: model:ir.model.fields,help:hr_expense_caisse.field_hr_expense_account_move__website_message_ids
+msgid "Website communication history"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "caisse(s)"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "caisses sélectionnées"
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-python
+#: code:addons/hr_expense_caisse/models/hr_expense_account_move.py:0
+#, python-format
+msgid ""
+"vous n'avez pas suffisamment de solde pour effectuer cette transaction."
+msgstr ""
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "• Filtré"
+msgstr ""
+
+#. module: hr_expense_caisse
+#: model:ir.actions.act_window,name:hr_expense_caisse.action_view_hr_expense_account
+msgid "💰 Expense Caisse"
+msgstr "Dépenses Caisse"
+
+#. module: hr_expense_caisse
+#. odoo-javascript
+#: code:addons/hr_expense_caisse/static/src/components/expense_dashboard.xml:0
+#, python-format
+msgid "🔍 Toutes les caisses"
+msgstr ""

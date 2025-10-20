@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Vue formulaire tâche enrichie avec gestion des avances et règlements multiples -->
+  <record id="project_task_form_view_expense" model="ir.ui.view">
+    <field name="name">project.task.form.expense</field>
+    <field name="model">project.task</field>
+    <field name="inherit_id" ref="project.view_task_form2"/>
+    <field name="arch" type="xml">
+
+      <!-- Smart buttons -->
+      <div name="button_box" position="inside">
+        <!-- <button name="action_view_task_expenses" type="object" class="oe_stat_button" icon="fa-money" invisible="expense_count == 0">
+          <field name="expense_count" widget="statinfo" string="Dépenses"/>
+        </button> -->
+
+      </div>
+
+      <!-- Ajout des onglets -->
+      <notebook position="inside">
+
+
+        <!-- Onglet Dépenses -->
+        <page string="Dépenses" name="expenses">
+          <group>
+            <group>
+              <field name="total_expenses" widget="monetary" readonly="1"/>
+              <field name="expense_count" readonly="1"/>
+            </group>
+            <group>
+              <field name="last_expense_date" readonly="1"/>
+            </group>
+          </group>
+          <field name="expense_ids" context="{'default_expense_move_type': 'spent'}">
+        <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" >
+          <field name="name"/>
+          <field name="date"/>
+          <field name="employee_id"/>
+          <field name="project_id" optional="show"/>
+          <field name="task_id" optional="show"/>
+          <field name="expense_category_id" optional="show"/>
+          <field name="expense_type_id" optional="show"/>
+          <field name="expense_move_type" string="Type Debug" optional="hide"  invisible="1" />
+          <!-- <field name="expense_category_id"/> -->
+          <!-- <field name="expense_category_id"/> -->
+          <field name="total_amount"/>
+          <field name="description"/>
+        </list>
+      </field>
+        </page>
+
+        <!-- <page string="Dépenses Projet" name="stages_tab">
+    Étapes actuelles du projet
+    
+          <field name="expense_ids"/>
+
+        </page> -->
+
+        <!-- Onglet Avances et Règlements -->
+
+      </notebook>
+      <xpath expr="//field[@name='allocated_hours']" position="after">
+        <field name="parent_id" invisible="0"/>
+        <field name="total_expenses_parent" invisible="1"/>
+        <div class="o_expense_balance_container" style="margin-top: 10px;" invisible="'total_expenses_parent' ==  0">
+          <span class="badge badge-pill badge-info" style="font-size: 16px; padding: 15px 25px; background-color: #17a2b8; color: white; border-radius: 25px;">
+            Total Dépenses : 
+            <span style="font-weight: bold;">
+              <field name="total_expenses_parent" widget="float" nolabel="1" readonly="1" style="display: inline;"/>
+                DH
+            </span>
+          </span>
+        </div>
+      </xpath>
+      <xpath expr="//form[1]/sheet[1]/notebook[1]/page[@name='sub_tasks_page']/field[@name='child_ids']/list[1]/field[@name='name']" position="after">
+        <field name="total_expenses_parent" optional="show" sum="Total" />
+      </xpath>
+    </field>
+  </record>
+
+  <!-- Vue liste des tâches enrichie -->
+  <record id="project_task_tree_view_expense" model="ir.ui.view">
+    <field name="name">project.task.tree.expense</field>
+    <field name="model">project.task</field>
+    <field name="inherit_id" ref="project.view_task_tree2"/>
+    <field name="arch" type="xml">
+      <field name="project_id" position="after">
+        <field name="total_expenses" optional="hide" widget="monetary"/>
+      </field>
+      <xpath expr="//field[@name='activity_ids']" position="after">
+        <field name="task_type" optional="show"/>
+      </xpath>
+      <xpath expr="//field[@name='state']" position="attributes">
+        <attribute name="readonly">True</attribute>
+      </xpath>
+    
+
+    </field>
+  </record>
+
+  <record id="project_embedded_action_expenses_dashboard" model="ir.embedded.actions">
+    <field name="parent_res_model">project.project</field>
+    <field name="sequence">100</field>
+    <field name="name">Dépenses</field>
+    <field name="parent_action_id" ref="project.project_update_all_action"/>
+    <field name="python_method">action_view_project_expenses</field>
+    <field name="context">{"from_embedded_action": true}</field>
+    <field name="domain">[(1, '=', 1)]</field>
+  </record>
+
+
+
+</odoo>

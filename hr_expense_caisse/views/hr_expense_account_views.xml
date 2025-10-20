@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!-- Vue Kanban avec style amélioré -->
+  <record id="hr_expense_account_kanban" model="ir.ui.view">
+    <field name="name">hr.expense.account.kanban</field>
+    <field name="model">hr.expense.account</field>
+    <field name="arch" type="xml">
+      <kanban class="o_kanban_dashboard">
+        <field name="name"/>
+        <field name="user_id"/>
+        <field name="employee_id"/>
+        <field name="balance"/>
+        <field name="type"/>
+        <field name="status"/>
+        <templates>
+          <t t-name="kanban-box">
+            <div t-att-class="'oe_kanban_card oe_kanban_global_click ' + (record.type.raw_value == 'project' ? 'border-info' : record.type.raw_value == 'shared' ? 'border-success' : 'border-warning')" style="border-width: 2px; margin: 8px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+              <!-- Header avec gradient selon le type -->
+              <div t-att-class="'card-header text-white ' + (record.type.raw_value == 'project' ? 'bg-info' : record.type.raw_value == 'shared' ? 'bg-success' : 'bg-warning')" style="border-radius: 10px 10px 0 0; padding: 12px;">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-0 font-weight-bold">
+                      <i t-att-class="'fa mr-1 ' + (record.type.raw_value == 'project' ? 'fa-briefcase' : record.type.raw_value == 'shared' ? 'fa-users' : 'fa-user')"/>
+                      <field name="name"/>
+                    </h6>
+                    <!-- <small style="opacity: 0.9;">
+                      <field name="project_id"/>
+                    </small> -->
+                  </div>
+                  <div>
+                    <span class="badge badge-light">
+                      <field name="type"/>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contenu principal -->
+              <div class="card-body" style="padding: 16px; background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);">
+                <!-- Solde avec icône -->
+                <div class="text-center mb-3">
+                  <div class="d-flex justify-content-center align-items-center mb-2">
+                    <i class="fa fa-money fa-lg text-primary mr-2"/>
+                    <span class="text-muted small">Solde disponible</span>
+                  </div>
+                  <h3 class="mb-0" t-att-class="'font-weight-bold ' + (record.balance.raw_value > 0 ? 'text-success' : record.balance.raw_value == 0 ? 'text-warning' : 'text-danger')">
+                    <field name="balance" widget="monetary"/>
+                  </h3>
+                </div>
+
+                <!-- Barre de statut -->
+                <div class="mb-3">
+                  <div class="progress" style="height: 6px; border-radius: 3px;">
+                    <div t-att-class="'progress-bar ' + (record.status.raw_value == 'healthy' ? 'bg-success' : record.status.raw_value == 'warning' ? 'bg-warning' : 'bg-danger')" role="progressbar" t-att-style="'width: ' + (record.status.raw_value == 'healthy' ? '100' : record.status.raw_value == 'warning' ? '60' : '30') + '%;'">
+                    </div>
+                  </div>
+                  <small t-att-class="'text-center d-block mt-1 ' + (record.status.raw_value == 'healthy' ? 'text-success' : record.status.raw_value == 'warning' ? 'text-warning' : 'text-danger')">
+                    <i t-att-class="'fa mr-1 ' + (record.status.raw_value == 'healthy' ? 'fa-check-circle' : record.status.raw_value == 'warning' ? 'fa-exclamation-triangle' : 'fa-times-circle')"/>
+                    <field name="status"/>
+                  </small>
+                </div>
+
+                <!-- Responsable -->
+                <div class="d-flex justify-content-center align-items-center">
+                  <img t-att-src="kanban_image('res.users', 'avatar_128', record.user_id.raw_value)" class="rounded-circle mr-2" style="width: 24px; height: 24px;"/>
+                  <small class="text-muted">
+                    <field name="user_id"/>
+                  </small>
+                </div>
+              </div>
+
+              <!-- Footer avec action si nécessaire -->
+              <div class="card-footer bg-light text-center" style="border-radius: 0 0 10px 10px; padding: 8px;">
+                <small class="text-muted">
+                  <i class="fa fa-clock-o mr-1"/>
+Cliquez pour voir les détails
+                </small>
+              </div>
+            </div>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+
+  <record id="hr_expense_account_tree" model="ir.ui.view">
+    <field name="name">hr.expense.account.tree</field>
+    <field name="model">hr.expense.account</field>
+    <field name="arch" type="xml">
+      <list editable="bottom" decoration-success="status == 'healthy'" decoration-warning="status == 'warning'" decoration-danger="status in ['critical', 'empty']">
+        <field name="name" />
+        <field name="currency_id" invisible="1"/>
+        <field name="user_id" widget="many2one_avatar_user" />
+        <field name="employee_id" />
+        <field name="type" widget="badge" decoration-info="type == 'project'" decoration-success="type == 'shared'" decoration-warning="type == 'personal'" />
+        <field name="balance" sum="Total Balances" decoration-bf="1" widget="monetary" />
+        <field name="status" widget="badge" decoration-success="status == 'healthy'" decoration-warning="status == 'warning'" decoration-danger="status in ['critical', 'empty']" />
+        <field name="min_balance" optional="hide" />
+        <field name="last_transaction_date" optional="hide" />
+      </list>
+    </field>
+  </record>
+
+  <record id="hr_expense_account_form" model="ir.ui.view">
+    <field name="name">hr.expense.account.form</field>
+    <field name="model">hr.expense.account</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_replenish" type="object" groups="hr_expense_caisse.group_expense_caisse_administrator" string="Alimentation Caisse" class="btn-success"/>
+          <!-- <button name="action_recalculate_monthly_balances" type="object" groups="hr_expense_caisse.group_expense_caisse_administrator" string="Recalculer Soldes Mensuels" class="btn-warning" confirm="Êites-vous sûr de vouloir recalculer tous les soldes mensuels de cette caisse ? Cette opération réinitialisera tous les soldes."/> -->
+        </header>
+        <sheet>
+          <div style="max-width:100%;" class="oe_title w-100 col-12">
+            <label for="employee_id"/>
+            <h2 class="col-12 w-100">
+              <field name="employee_id" width="100%" class="o_text_overflow w-100 col-12" />
+            </h2>
+          </div>
+
+          <!-- Filtre par mois pour les statistiques -->
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0">
+                    <i class="fa fa-filter mr-2"></i>
+                    Filtrer les statistiques par mois
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <field name="selected_month_id" string="Sélectionner un mois" placeholder="Choisissez un mois" options="{'reload_on_change': true, 'no_create': True, 'no_create_edit': True}" domain="[('caisse_id', '=', id)]"/>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                      <button name="action_clear_all_filters" type="object" string="Effacer tous les filtres" class="btn btn-secondary btn-sm" title="Réinitialiser tous les filtres">
+                        <i class="fa fa-times mr-1"></i>Tout effacer
+                      </button>
+                    </div>
+                    <div class="col-md-4 text-right">
+                      <small class="text-muted">
+                        <i class="fa fa-info-circle mr-1"></i>
+                        Les statistiques sont calculées pour le mois sélectionné
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistiques en haut -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <div class="alert alert-info text-center">
+                <h4>
+                  <field name="filtered_balance" widget="monetary" readonly="1" invisible="not selected_month_id"/>
+                  <field name="balance" widget="monetary" readonly="1" invisible="selected_month_id" />
+                </h4>
+                <small>Solde Disponible</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="alert alert-warning text-center">
+                <h4>
+                  <field name="filtered_total_spent" widget="monetary" readonly="1" invisible="not selected_month_id"/>
+                  <field name="total_spent" widget="monetary" readonly="1" invisible="selected_month_id"/>
+                </h4>
+                <small>Total Dépensé</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="alert alert-success text-center">
+                <h4>
+                  <field name="filtered_total_replenished" widget="monetary" readonly="1" invisible="not selected_month_id" />
+                  <field name="total_replenished" widget="monetary" readonly="1" invisible="selected_month_id"/>
+                </h4>
+                <small>Total Reconstitué</small>
+              </div>
+            </div>
+          </div>
+
+          <group>
+            <group>
+              <field name="name" />
+              <field name="type" invisible="1" />
+              <field name="user_id" widget="many2one_avatar_user" />
+            </group>
+            <group>
+              <!-- <field name="min_balance" /> -->
+              <field name="status" widget="badge" decoration-success="status == 'healthy'" decoration-warning="status == 'warning'" decoration-danger="status in ['critical', 'empty']"/>
+              <field name="last_transaction_date" readonly="1"/>
+              <field name="user_ids" invisible="type != 'shared'" widget="many2many_tags" />
+            </group>
+          </group>
+
+          <!-- Boutons dans le style Odoo -->
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <div class="oe_button_box" name="button_box">
+                <button name="action_view_months" type="object" class="oe_stat_button" icon="fa-calendar">
+                  <field name="month_count" widget="statinfo" string="Mois"/>
+                </button>
+                <!-- <button name="action_view_transactions" type="object" class="oe_stat_button" icon="fa-list">
+                  <field name="transaction_count" widget="statinfo" string="Transactions"/>
+                </button> -->
+              </div>
+            </div>
+          </div>
+
+          <notebook>
+            <page name="transactions" string="Transactions">
+              <!-- Filtre par mois -->
+              <!-- <div class="row mb-3">
+                <div class="col-md-12">
+                  <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                      <h5 class="mb-0">
+                        <i class="fa fa-calendar mr-2"></i>
+                        Filtrer les transactions par mois
+                      </h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <field name="selected_month_id" string="Sélectionner un mois" placeholder="Choisissez un mois" options="{'reload_on_change': true, 'no_create': True, 'no_create_edit': True}"/>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                          <button name="action_clear_month_filter" type="object" string="Effacer le filtre" class="btn btn-secondary btn-sm" title="Réinitialiser le filtre de mois">
+                            <i class="fa fa-times mr-1"></i>Effacer
+                          </button>
+                        </div>
+                      </div>
+                        <div class="col-md-12">
+                          <div class="alert alert-info mb-0">
+                            <i class="fa fa-info-circle mr-1"></i>
+                            <span>Filtrage actif pour le mois : <field name="selected_month_id" readonly="1" nolabel="1"/></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div> -->
+
+              <!-- Liste des transactions filtrées -->
+              <field name="filtered_expense_account_move_ids">
+                <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" edit="0" create="0">
+                  <field name="expense_move_type" invisible="True"/>
+                  <field name="name"/>
+                  <field name="caisse_mois_id" options="{'no_create': True, 'no_create_edit': True}" />
+                  <field name="date" options='{"datepicker": {"format": "d/MM/y H:m"}}'/>
+                  <field name="employee_id" widget="many2one_avatar_user"/>
+                  <field name="user_id" widget="many2one_avatar_user"/>
+                  <field name="designation" />
+                  <!-- <field name="caisse_manager_id" optional="hide" /> -->
+                  <field name="currency_id" column_invisible="1"/>
+                  <!-- <field name="payment_id" optional="hide" invisible="expense_move_type == 'spent'" /> -->
+                  <field name="total_reconstitution" invisible="total_reconstitution == 0" decoration-bf="2" sum="Total Alimentation" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+                  <field name="total_deponse" invisible="total_deponse == 0" decoration-bf="2" sum="Total Dépense" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+                  <!-- CHAMPS DE VALIDATION COMPLÈTEMENT DÉSACTIVÉS
+                                    <field name="validate_project_manager" widget="badge" decoration-success="validate_project_manager == 'valid'" decoration-warning="validate_project_manager == 'pending'"/>
+                                    <field name="validate_main_caisse" widget="badge" decoration-success="validate_main_caisse == 'valid'" decoration-warning="validate_main_caisse == 'pending'"/>
+                                    -->
+                  <!-- <field name="attachment_ids" widget="many2many_binary" string="Attach Receipt"/> -->
+                  <field name="nbr_attachment_ids" string="Pièces Jointes" />
+
+                </list>
+              </field>
+              <group expand="1" class="oe_subtotal_footer oe_right">
+                <label for="balance" class="font-weight-bold text-success" invisible="selected_month_id" />
+                <label for="filtered_balance" string="Solde du mois" class="font-weight-bold text-success" invisible="not selected_month_id" />
+                <h2>
+                  <field nolabel="1" name="balance" widget="monetary" readonly="1" invisible="selected_month_id" />
+                  <field nolabel="1" name="filtered_balance" widget="monetary" readonly="1" invisible="not selected_month_id"/>
+                </h2>
+              </group>
+            </page>
+
+            <page name="analytics" invisible="1" string="Statistiques">
+              <div class="row">
+                <div class="col-md-6">
+                  <group string="Résumé Financier">
+                    <field name="total_spent" widget="monetary" readonly="1"/>
+                    <field name="total_replenished" widget="monetary" readonly="1"/>
+                    <field name="balance" widget="monetary" readonly="1"/>
+                  </group>
+                </div>
+                <div class="col-md-6">
+                  <group string="Informations">
+                    <field name="status" widget="badge" readonly="1"/>
+                    <field name="last_transaction_date" readonly="1"/>
+                    <field name="min_balance" widget="monetary" readonly="1"/>
+                  </group>
+                </div>
+              </div>
+            </page>
+            <page name="month" string="Month">
+              <field name="month_ids">
+                <list edit="0" create="0">
+                  <field name="name"/>
+                  <field name="solde_initial" widget="monetary"/>
+                  <field name="sold" widget="monetary"/>
+                  <field name="solde_final" widget="monetary"/>
+                  <field name="currency_id" column_invisible="True"/>
+                </list>
+              </field>
+            </page>
+
+            <page name="extra" invisible="1" string="Configuration">
+              <group>
+                <field name="min_balance" />
+              </group>
+            </page>
+          </notebook>
+        </sheet>
+
+        <div class="o_attachment_preview o_center_attachment"/>
+        <chatter/>
+      </form>
+    </field>
+  </record>
+
+  <!-- Action avec vue Kanban -->
+  <record id="action_view_hr_expense_account" model="ir.actions.act_window">
+    <field name="name">💰 Expense Caisse</field>
+    <field name="res_model">hr.expense.account</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+                Créez votre première caisse de dépenses !
+      </p>
+      <p>
+                Gérez facilement vos caisses de projet et personnelles avec un système de suivi moderne.
+      </p>
+    </field>
+  </record>
+
+  <!-- Action Dashboard Client -->
+  <record id="action_expense_dashboard" model="ir.actions.client">
+    <field name="name">Dashboard</field>
+    <field name="tag">expense_dashboard</field>
+  </record>
+
+  <menuitem id="menu_hr_expense_caisse" name="Expense Caisse" web_icon="hr_expense_caisse,static/src/img/odoo_icon.png" />
+  <!-- <menuitem id="menu_hr_expense_dashboard" name="Dashboard" sequence="10" parent="menu_hr_expense_caisse" action="action_expense_dashboard"/> -->
+  <menuitem id="menu_hr_expense_account" name="Caisses" sequence="50" groups="hr_expense_caisse.group_expense_caisse_administrator,hr_expense_caisse.group_expense_caisse_caisse_manager" parent="menu_hr_expense_caisse" action="action_view_hr_expense_account"/>
+
+  <!-- Action pour les mouvements -->
+  <record id="action_view_hr_expense_account_move" model="ir.actions.act_window">
+    <field name="name">Mouvements</field>
+    <field name="res_model">hr.expense.account.move</field>
+    <field name="view_mode">list,form</field>
+    <field name="domain">[]</field>
+    <field name="context">{}</field>
+  </record>
+
+  <!-- <menuitem id="menu_hr_expense_move" name="Mouvements" sequence="60" parent="menu_hr_expense_caisse" action="action_view_hr_expense_account_move"/> -->
+
+</odoo>

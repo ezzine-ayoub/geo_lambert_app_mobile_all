@@ -1,0 +1,104 @@
+/* Dashboard moderne pour les caisses */
+.expense_dashboard_modern {
+    padding: 1rem;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+.dashboard_header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Cards KPI améliorées */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+/* Gradients pour les KPI */
+.bg-gradient {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-primary-dark, #0056b3) 100%) !important;
+}
+
+.bg-success.bg-gradient {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.bg-danger.bg-gradient {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%) !important;
+}
+
+.bg-primary.bg-gradient {
+    background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%) !important;
+}
+
+/* Icônes améliorées */
+.fa-2x {
+    opacity: 0.9;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.85em;
+    padding: 0.5em 0.75em;
+}
+
+/* Formulaires */
+.form-select {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .expense_dashboard_modern {
+        padding: 0.5rem;
+    }
+    
+    .dashboard_header {
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Améliorations pour les détails mensuels */
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+
+@media (max-width: 768px) {
+    .border-end {
+        border-right: none !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+}
+
+/* Espacement des gaps */
+.gap-2 > * + * {
+    margin-left: 0.5rem !important;
+}

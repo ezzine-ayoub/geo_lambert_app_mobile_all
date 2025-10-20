@@ -1,0 +1,231 @@
+<odoo>
+    <!-- Vue Kanban -->
+    <record id="view_hr_expense_account_month_kanban" model="ir.ui.view">
+        <field name="name">hr.expense.account.month.kanban</field>
+        <field name="model">hr.expense.account.month</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_dashboard">
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="project_id"/>
+                <field name="caisse_id"/>
+                <field name="sold"/>
+                <field name="solde_initial"/>
+                <field name="solde_final"/>
+                <field name="number_transaction"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click border-primary" style="border-width: 2px; margin: 8px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+                            <!-- Header avec le mois -->
+                            <div class="card-header bg-primary text-white" style="border-radius: 10px 10px 0 0; padding: 12px;">
+                                <h5 class="mb-0 font-weight-bold text-center">
+                                    <i class="fa fa-calendar mr-2"/>
+                                    <field name="name"/>
+                                </h5>
+                                <div class="text-center mt-1">
+                                    <small style="opacity: 0.9;">
+                                        <field name="project_id"/>
+ -                                        <field name="caisse_id"/>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Contenu principal -->
+                            <div class="card-body" style="padding: 16px; background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);">
+
+                                <!-- Soldes Initial et Final -->
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <i class="fa fa-play text-info mr-1"/>
+                                            <h6 class="text-muted mb-1">Solde Initial</h6>
+                                            <h4 class="mb-0 font-weight-bold text-info">
+                                                <field name="solde_initial" widget="monetary"/>
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <i class="fa fa-stop text-secondary mr-1"/>
+                                            <h6 class="text-muted mb-1">Solde Final</h6>
+                                            <h4 class="mb-0 font-weight-bold text-secondary">
+                                                <field name="solde_final" widget="monetary"/>
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nombre de transactions -->
+                                <div class="text-center mb-3">
+                                    <div class="badge badge-info">
+                                        <i class="fa fa-list mr-1"/>
+                                        <field name="number_transaction"/>
+ transaction(s)
+                                    </div>
+                                </div>
+
+                                <!-- Responsable -->
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <img t-att-src="kanban_image('res.users', 'avatar_128', record.user_id.raw_value)" class="rounded-circle mr-2" style="width: 24px; height: 24px;"/>
+                                    <small class="text-muted">
+                                        <field name="user_id"/>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Footer sans bouton -->
+                            <div class="card-footer bg-light text-center" style="border-radius: 0 0 10px 10px; padding: 8px;">
+                                <small class="text-muted">
+                                    <i class="fa fa-calendar mr-1"/>
+Cliquez pour voir les détails
+                                </small>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vue tree améliorée -->
+    <record id="view_hr_expense_account_month_tree" model="ir.ui.view">
+        <field name="name">hr.expense.account.month.tree</field>
+        <field name="model">hr.expense.account.month</field>
+        <field name="arch" type="xml">
+            <list decoration-success="sold > 0" decoration-warning="sold == 0" decoration-danger="sold &lt; 0">
+                <field name="name" string="Mois"/>
+                <field name="caisse_id" string="Caisse"/>
+                <field name="project_id" string="Projet"/>
+                <field name="user_id" widget="many2one_avatar_user" string="Responsable"/>
+                <field name="solde_initial" widget="monetary" string="Solde Initial"/>
+                <field name="sold" widget="monetary" string="Solde Actuel" sum="Total Soldes"/>
+                <field name="solde_final" widget="monetary" string="Solde Final"/>
+                <field name="number_transaction" string="Nb Transactions"/>
+                <field name="currency_id" invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue form améliorée -->
+    <record id="view_hr_expense_account_month_form" model="ir.ui.view">
+        <field name="name">hr.expense.account.month.form</field>
+        <field name="model">hr.expense.account.month</field>
+        <field name="arch" type="xml">
+            <form string="Mois de Dépenses">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" readonly="1" class="o_text_overflow"/>
+                        </h1>
+                    </div>
+
+                    <!-- Bouton des transactions dans le style Odoo -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="oe_button_box" name="button_box">
+                                <!-- <button name="open_view_transaction" type="object" class="oe_stat_button" icon="fa-list"> -->
+                                <!-- <field name="number_transaction" widget="statinfo" string="Transactions"/> -->
+                                <!-- </button> -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistiques en haut -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="alert alert-info text-center">
+                                <h4>
+                                    <field name="solde_initial" widget="monetary" readonly="1"/>
+                                </h4>
+                                <small>Solde Initial</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-success text-center">
+                                <h4>
+                                    <field name="sold" widget="monetary" readonly="1"/>
+                                </h4>
+                                <small>Solde Actuel</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-secondary text-center">
+                                <h4>
+                                    <field name="solde_final" widget="monetary" readonly="1"/>
+                                </h4>
+                                <small>Solde Final</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="caisse_id" readonly="1"/>
+                            <field name="project_id" readonly="1"/>
+                            <field name="user_id" widget="many2one_avatar_user" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="company_id" readonly="1"/>
+                            <field name="currency_id" readonly="1"/>
+                            <field name="number_transaction" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Transactions du Mois" name="transactions">
+                            <field name="transaction_ids">
+                                <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" edit="0" create="0">
+                                    <field name="expense_move_type" invisible="True"/>
+                                    <field name="name"/>
+                                    <field name="caisse_mois_id" options="{'no_create': True, 'no_create_edit': True}" />
+                                    <field name="date" options='{"datepicker": {"format": "d/MM/y H:m"}}'/>
+                                    <field name="user_id" widget="many2one_avatar_user"/>
+                                    <field name="designation" />
+                                    <!-- <field name="project_manager_id" optional="hide" /> -->
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <!-- <field name="payment_id" optional="hide" invisible="expense_move_type == 'spent'" /> -->
+                                    <field name="total_reconstitution" invisible="total_reconstitution == 0" decoration-bf="2" sum="Total Alimentation" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+                                    <field name="total_deponse" invisible="total_deponse == 0" decoration-bf="2" sum="Total Dépense" options="{'currency_field': 'currency_id'}" decoration-danger="expense_move_type == 'spent'" decoration-success="expense_move_type == 'replenish'" widget="monetary" />
+                                    <field name="nbr_attachment_ids" string="Pièces Jointes" />
+                                </list>
+                            </field>
+
+                            <!-- Totaux en bas -->
+                            <group expand="1" class="oe_subtotal_footer oe_right">
+                                <label for="sold" class="font-weight-bold text-success"/>
+                                <h2>
+                                    <field name="sold" widget="monetary" readonly="1" nolabel="1"/>
+                                </h2>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action Window mise à jour avec sécurité -->
+    <record id="hr_expense_account_month_action" model="ir.actions.act_window">
+        <field name="name">Mois de Dépenses</field>
+        <field name="res_model">hr.expense.account.month</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'group_by': 'caisse_id'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer votre premier mois de dépenses !
+            </p>
+            <p>
+                Les mois de dépenses vous permettent de suivre vos transactions mensuelles,
+                de gérer vos soldes et d'avoir une vue d'ensemble de vos finances.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <!-- <menuitem id="hr_expense_account_month_menu" name="Mois de Dépenses" parent="menu_hr_expense_caisse" action="hr_expense_account_month_action" sequence="20"/> -->
+</odoo>

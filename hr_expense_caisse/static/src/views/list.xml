@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <t t-name="hr_expense_caisse.DashboardListRenderer" owl="1">
+        <div class="hr_expense_caisse_dashboard_container">
+            <ExpenseDashboard/>
+        </div>
+        <!-- Appeler le template du parent directement -->
+        <t t-call="web.ListRenderer" t-props="props"/>
+    </t>
+</templates>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Vue formulaire projet enrichie avec champs conditionnels -->
+  <record id="project_project_form_view_expense" model="ir.ui.view">
+    <field name="name">project.project.form.expense</field>
+    <field name="model">project.project</field>
+    <field name="inherit_id" ref="project.edit_project"/>
+    <field name="arch" type="xml">
+      <xpath expr="//div[@name='button_box']" position="inside">
+
+        <!-- Bouton Tâches Terrain -->
+        <button type="object" name="action_view_project_expenses" class="oe_stat_button" icon="fa-usd">
+          <field string="Dépenses" name="task_expense_count" widget="statinfo"/>
+        </button>
+
+      </xpath>
+
+      <page name="description" position="before">
+        <!-- Onglet Dépenses Tâche -->
+        <page string="Dépenses Tâche" name="expenses_tab">
+          <group>
+            <group>
+              <field name="total_project_expenses" widget="monetary" readonly="1"/>
+            </group>
+            <group>
+              <field name="task_expense_count" readonly="1"/>
+            </group>
+          </group>
+          <!-- Tâches parentes -->
+          <separator string="Tâches Parentes"/>
+          <field name="parent_tasks" mode="kanban" nolabel="1">
+            <kanban>
+              <field name="name"/>
+              <field name="total_expenses"/>
+              <field name="expense_count"/>
+              <field name="child_ids"/>
+              <field name="parent_id"/>
+              <templates>
+                <t t-name="kanban-box">
+                  <div class="oe_kanban_card oe_kanban_global_click" style="border-left: 4px solid #007bff;">
+                    <div class="oe_kanban_content">
+                      <div>
+                        <strong>
+                          <field name="name"/>
+                        </strong>
+                        <br/>
+                        <span class="badge badge-info ml-2" t-if="record.child_ids.raw_value.length">
+                          <i class="fa fa-sitemap me-2"/>
+                          <t t-esc="record.child_ids.raw_value.length"/>
+ sous-tâches
+                        </span>
+                      </div>
+                      <div class="text-muted">
+                        Dépenses de Ce Tâche: <field name="total_expenses" widget="monetary"/>
+                      <br/>
+                        Dépenses de sous-tâches: <field name="total_expenses_chields" widget="monetary"/>
+                    <br/>
+                        Total Des Dépenses: <field name="total_expenses_parent" widget="monetary"/>
+                  </div>
+                </div>
+              </div>
+            </t>
+          </templates>
+        </kanban>
+      </field>
+    </page>
+
+    <!-- Onglet Dépenses Projet -->
+    <page string="Dépenses" name="stages_tab">
+      <field name="expense_ids" context="{'default_expense_move_type': 'spent'}">
+        <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" >
+          <field name="name"/>
+          <field name="date"/>
+          <field name="employee_id"/>
+          <field name="project_id" optional="show"/>
+          <field name="task_id" optional="show"/>
+          <field name="expense_category_id" optional="show"/>
+          <field name="expense_type_id" optional="show"/>
+          <field name="expense_move_type" string="Type Debug" optional="hide"  invisible="1" />
+          <!-- <field name="expense_category_id"/> -->
+          <!-- <field name="expense_category_id"/> -->
+          <field name="total_amount" sum="Total" />
+          <field name="description"/>
+        </list>
+      </field>
+    </page>
+  </page>
+
+</field>
+</record>
+
+
+<!-- Vue liste des projets avec type et numéro -->
+<record id="project_project_tree_view_expense" model="ir.ui.view">
+<field name="name">project.project.tree.expense</field>
+<field name="model">project.project</field>
+<field name="inherit_id" ref="project.view_project"/>
+<field name="arch" type="xml">
+  <field name="user_id" position="after">
+    <field name="total_project_expenses" optional="hide" sum="Total dépenses" widget="monetary"/>
+    <field name="task_expense_count" optional="hide"/>
+  </field>
+</field>
+</record>
+
+</odoo>

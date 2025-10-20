@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates>
+    <t t-name="hr_expense_caisse.ExpenseDashboardSimple" owl="1">
+        <div class="hr_expense_caisse_dashboard">
+            <div class="expense_dashboard_modern">
+                <!-- Header -->
+                <div class="dashboard_header">
+                    <div class="header_left">
+                        <h2 class="dashboard_title">
+                            <i class="fa fa-tachometer"/>
+                            Tableau de bord Caisses (Simple)
+                        </h2>
+                    </div>
+                    <div class="header_actions">
+                        <button class="btn_refresh" t-on-click="refreshData">
+                            <i class="fa fa-refresh"/> Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content - CORRECTION: Affichage direct sans loader -->
+                <div class="dashboard_content">
+                    
+                    <!-- Filtres -->
+                    <div class="filters_section">
+                        <div class="filter_group">
+                            <!-- Filtre Caisse -->
+                            <div class="filter_item">
+                                <label class="filter_label">
+                                    <i class="fa fa-building-o"/> Caisse
+                                </label>
+                                <select class="filter_select" t-on-change="onCaisseFilterChange">
+                                    <option value="">Toutes les caisses</option>
+                                    <t t-foreach="state.allCaisses" t-as="caisse" t-key="caisse.id">
+                                        <option t-att-value="caisse.id" 
+                                                t-att-selected="state.selectedCaisses.includes(caisse.id) ? 'selected' : null">
+                                            <t t-esc="caisse.name"/> • <t t-esc="caisse.type || 'N/A'"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                            
+                            <!-- Filtre Mois -->
+                            <div class="filter_item">
+                                <label class="filter_label">
+                                    <i class="fa fa-calendar"/> Période
+                                </label>
+                                <select class="filter_select" t-on-change="onMonthFilterChange">
+                                    <option value="">
+                                        <t t-if="state.selectedCaisses.length > 0">Tous les mois</t>
+                                        <t t-else="">Depuis La Creation</t>
+                                    </option>
+                                    <t t-foreach="state.allMonths" t-as="month" t-key="month.id">
+                                        <option t-att-value="month.id" 
+                                                t-att-selected="state.selectedMonth === month.id ? 'selected' : null">
+                                            <t t-esc="month.display_name || month.name || 'Mois'"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards principales -->
+                    <div class="kpi_grid">
+                        <!-- Solde Total -->
+                        <div class="kpi_card balance">
+                            <div class="kpi_icon">
+                                <i class="fa fa-money"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Solde total</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalBalance, 1)"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Dépenses -->
+                        <div class="kpi_card expenses">
+                            <div class="kpi_icon">
+                                <i class="fa fa-arrow-down"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Total dépensé</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalExpenses, 1)"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Reconstitutions -->
+                        <div class="kpi_card replenishments">
+                            <div class="kpi_icon">
+                                <i class="fa fa-arrow-up"/>
+                            </div>
+                            <div class="kpi_content">
+                                <div class="kpi_label">Total Recettes</div>
+                                <div class="kpi_value">
+                                    <t t-esc="renderMonetaryField(state.totalReplenishments, 1)"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indicateurs rapides -->
+                    <div class="quick_indicators">
+                        <div class="indicator_item">
+                            <div class="indicator_label">Caisses</div>
+                            <div class="indicator_value"><t t-esc="state.allCaisses.length"/></div>
+                        </div>
+                        <div class="indicator_item">
+                            <div class="indicator_label">Mois</div>
+                            <div class="indicator_value"><t t-esc="state.allMonths.length"/></div>
+                        </div>
+                        <div class="indicator_item">
+                            <div class="indicator_label">Mouvements</div>
+                            <div class="indicator_value"><t t-esc="state.expenseMovements.length"/></div>
+                        </div>
+                        <div t-if="state.filteredCount !== undefined" class="indicator_item">
+                            <div class="indicator_label">Filtrés</div>
+                            <div class="indicator_value"><t t-esc="state.filteredCount"/></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+</templates>

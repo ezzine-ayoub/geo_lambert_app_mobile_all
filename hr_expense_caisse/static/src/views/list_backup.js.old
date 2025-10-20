@@ -1,0 +1,552 @@
+/** @odoo-module */
+
+import { registry } from '@web/core/registry';
+import { listView } from "@web/views/list/list_view";
+import { ListRenderer } from "@web/views/list/list_renderer";
+import { ListController } from "@web/views/list/list_controller";
+import { useService } from '@web/core/utils/hooks';
+import { Component, onWillStart, useState, onMounted, onWillUnmount } from "@odoo/owl";
+
+import { ExpenseDashboard } from '../components/expense_dashboard';
+
+export class ExpenseDashboardListRenderer extends ListRenderer {
+    static components = { ...ListRenderer.components, ExpenseDashboard };
+    static template = 'hr_expense_caisse.DashboardListRenderer';
+    
+    setup() {
+        super.setup();
+        console.log('🛠️ Setup ExpenseDashboardListRenderer');
+        
+        // Vérifier si c'est notre modèle spécifique
+        this.showExpenseDashboard = this.props.list?.resModel === 'hr.expense.account.move';
+        
+        if (this.showExpenseDashboard) {
+            console.log('🛠️ Dashboard activé pour hr.expense.account.move');
+            this.notification = useService('notification');
+            this.orm = useService('orm');
+            
+            // État pour les filtres synchronisés
+            this.syncState = useState({
+                dashboardFiltered: false,
+                lastSearchDomain: null,
+                isApplyingFilter: false
+            });
+            
+            // Écouter les changements de filtres du dashboard
+            onMounted(() => {
+                this.setupFilterSynchronization();
+            });
+            
+            // Nettoyer les observateurs lors de la destruction (dans le renderer, on référence le controller)
+            onWillUnmount(() => {
+                console.log('🧽 RENDERER: Nettoyage en cours');
+                // L'observateur DOM sera nettoyé par le controller
+            });
+        }
+    }
+    
+    setupFilterSynchronization() {
+        console.log('🔄 SYNC: Configuration synchronisation des filtres');
+        
+        // Écouter les événements du dashboard via l'environment bus
+        if (this.env.bus) {
+            this.env.bus.addEventListener('dashboard-filter-changed', (event) => {
+                console.log('🎯 SYNC: Réception événement dashboard via env.bus:', event.detail);
+                this.applyDashboardFiltersToSearch(event.detail);
+            });
+        }
+        
+        // Écouter aussi via window pour plus de sécurité
+        if (typeof window !== 'undefined') {
+            window.addEventListener('dashboard-filter-changed', (event) => {
+                console.log('🌍 SYNC: Réception événement dashboard via window:', event.detail);
+                this.applyDashboardFiltersToSearch(event.detail);
+            });
+        }
+    }
+    
+    async applyDashboardFiltersToSearch(filterData) {
+        try {
+            if (!filterData || this.syncState.isApplyingFilter) {
+                console.log('⏭️ SYNC: Ignorer application filtre (déjà en cours ou pas de données)');
+                return;
+            }
+            
+            console.log('🔄 SYNC: Application filtres dashboard vers search:', filterData);
+            this.syncState.isApplyingFilter = true;
+            
+            // Construire le domaine depuis les filtres du dashboard
+            const searchDomain = filterData.domain || [];
+            console.log('🔍 SYNC: Domaine à appliquer:', searchDomain);
+            
+            // Méthode alternative : utiliser l'action pour recharger avec le domaine
+            if (this.env.services && this.env.services.action) {
+                try {
+                    const actionService = this.env.services.action;
+                    
+                    // Construire l'action avec le nouveau domaine
+                    const action = {
+                        type: 'ir.actions.act_window',
+                        res_model: 'hr.expense.account.move',
+                        view_mode: 'list,form',
+                        views: [[false, 'list'], [false, 'form']],
+                        domain: searchDomain,
+                        context: {},
+                        target: 'current'
+                    };
+                    
+                    // Pas de rechargement complet, juste mise à jour du domaine
+                    console.log('✅ SYNC: Domaine mis à jour pour la vue');
+                } catch (actionError) {
+                    console.warn('⚠️ SYNC: Erreur action service:', actionError);
+                }
+            }
+            
+            // Appliquer le filtre via le contrôleur de recherche si disponible
+            if (this.env.searchModel) {
+                try {
+                    // Désactiver temporairement le filtre dashboard pour éviter les boucles
+                    await this.env.searchModel.deactivateGroup('dashboard_filter');
+                    
+                    if (searchDomain.length > 0) {
+                        // Activer le filtre dashboard avec le nouveau domaine
+                        await this.env.searchModel.createNewFilters({
+                            groupId: 'dashboard_filter',
+                            filters: [{
+                                description: 'Filtre Dashboard',
+                                domain: searchDomain,
+                                groupNumber: 1
+                            }]
+                        });
+                    }
+                    
+                    console.log('✅ SYNC: Filtre appliqué avec succès');
+                } catch (searchError) {
+                    console.warn('⚠️ SYNC: Erreur searchModel:', searchError);
+                }
+            } else {
+                console.warn('⚠️ SYNC: searchModel non disponible');
+            }
+            
+        } catch (error) {
+            console.error('❌ SYNC: Erreur application filtre:', error);
+        } finally {
+            // Réactiver les filtres après un délai
+            setTimeout(() => {
+                this.syncState.isApplyingFilter = false;
+                console.log('🔓 SYNC: Synchronisation débloquée');
+            }, 1000);
+        }
+    }
+}
+
+export class ExpenseDashboardListController extends ListController {
+    setup() {
+        super.setup();
+        console.log('🛠️ Setup Controller');
+        this.notification = useService('notification');
+        
+        // État pour détecter les changements de filtres
+        this.filterState = useState({
+            lastDomain: null,
+            isHandlingSearch: false
+        });
+        
+        // Écouter les événements du renderer
+        if (typeof window !== 'undefined') {
+            window.addEventListener('renderer-filter-change-detected', () => {
+                console.log('📨 CONTROLLER: Signal reçu du renderer');
+                this.handleSearchFilterChange();
+            });
+        }
+        
+        // Configurer l'observateur DOM dans le contrôleur
+        this.setupDOMObserver();
+    }
+    
+    willDestroy() {
+        super.willDestroy?.();
+        // Nettoyer l'observateur DOM
+        if (this.domObserver) {
+            this.domObserver.disconnect();
+            console.log('🧽 CONTROLLER: Observateur DOM déconnecté');
+        }
+    }
+    
+    setupDOMObserver() {
+        try {
+            console.log('🔍 DOM: Configuration observateur de changements (Controller)');
+            
+            // Observer les changements sur les éléments de recherche
+            const observerConfig = {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'data-domain']
+            };
+            
+            const callback = (mutations) => {
+                let shouldCheck = false;
+                
+                mutations.forEach(mutation => {
+                    if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                        const target = mutation.target;
+                        
+                        // Vérifier si c'est lié à la recherche
+                        if (target.classList?.contains('o_searchview') ||
+                            target.classList?.contains('o_search_panel') ||
+                            target.closest?.('.o_search_options') ||
+                            target.closest?.('.o_searchview_facet')) {
+                            shouldCheck = true;
+                            console.log('🔍 DOM: Changement détecté dans la recherche:', target.className);
+                        }
+                    }
+                });
+                
+                if (shouldCheck) {
+                    setTimeout(() => this.handleSearchFilterChange(), 300);
+                }
+            };
+            
+            // Créer et lancer l'observateur
+            this.domObserver = new MutationObserver(callback);
+            
+            // Observer le document entier pour capturer tous les changements
+            if (typeof document !== 'undefined') {
+                this.domObserver.observe(document.body, observerConfig);
+                console.log('✅ DOM: Observateur activé (Controller)');
+            }
+            
+        } catch (error) {
+            console.error('❌ DOM: Erreur configuration observateur:', error);
+        }
+    }
+    
+    async onUpdatedPaging() {
+        const result = await super.onUpdatedPaging();
+        this.handleSearchFilterChange();
+        return result;
+    }
+    
+    // Méthode override pour détecter les changements de recherche
+    async onActiveElementsChanged() {
+        const result = await super.onActiveElementsChanged?.();
+        this.handleSearchFilterChange();
+        return result;
+    }
+    
+    async load() {
+        const result = await super.load();
+        // Délai pour s'assurer que le domaine est mis à jour
+        setTimeout(() => this.handleSearchFilterChange(), 100);
+        return result;
+    }
+    
+    // Override pour capturer tous les événements de recherche
+    async search(searchValue, { reload = true } = {}) {
+        console.log('🔍 SEARCH: Méthode search appelée avec:', { searchValue, reload });
+        const result = await super.search?.(searchValue, { reload });
+        // Délai pour s'assurer que la recherche est terminée
+        setTimeout(() => this.handleSearchFilterChange(), 200);
+        return result;
+    }
+    
+    // Override pour capturer les changements de contexte
+    async update(params) {
+        console.log('🔄 UPDATE: Méthode update appelée avec:', params);
+        const result = await super.update(params);
+        setTimeout(() => this.handleSearchFilterChange(), 100);
+        return result;
+    }
+    
+    // Override pour capturer le rechargement
+    async reload(params) {
+        console.log('🔁 RELOAD: Méthode reload appelée avec:', params);
+        const result = await super.reload(params);
+        setTimeout(() => this.handleSearchFilterChange(), 100);
+        return result;
+    }
+    
+    handleSearchFilterChange() {
+        try {
+            if (this.filterState.isHandlingSearch) {
+                console.log('⏭️ SEARCH: Déjà en cours de traitement - ignorer');
+                return;
+            }
+            
+            // Récupérer le domaine actuel de la recherche
+            const currentDomain = this.model?.root?.domain || [];
+            const domainString = JSON.stringify(currentDomain);
+            
+            console.log('🔍 DEBUG SEARCH: Détection changement filtres:', {
+                currentDomain: currentDomain,
+                domainLength: currentDomain.length,
+                domainString: domainString,
+                lastDomain: this.filterState.lastDomain,
+                hasChanged: this.filterState.lastDomain !== domainString
+            });
+            
+            // Vérifier si le domaine a changé
+            if (this.filterState.lastDomain !== domainString) {
+                console.log('🔍 SEARCH: Changement détecté dans les filtres de recherche:', {
+                    domain: currentDomain,
+                    length: currentDomain.length,
+                    isEmpty: currentDomain.length === 0,
+                    previousLength: this.filterState.lastDomain ? JSON.parse(this.filterState.lastDomain).length : 'N/A'
+                });
+                
+                this.filterState.lastDomain = domainString;
+                
+                // Informer le dashboard même si le domaine est vide (pour réinitialiser)
+                this.notifyDashboardOfSearchChange(currentDomain);
+            } else {
+                console.log('🔍 SEARCH: Aucun changement détecté - ignorer');
+            }
+        } catch (error) {
+            console.error('❌ SEARCH: Erreur détection changement filtres:', error);
+        }
+    }
+    
+    notifyDashboardOfSearchChange(searchDomain) {
+        try {
+            console.log('📢 SEARCH: Notification dashboard du changement (améliorée):', {
+                domain: searchDomain,
+                length: searchDomain.length,
+                isEmpty: !searchDomain || searchDomain.length === 0
+            });
+            
+            // Extraire les filtres pertinents pour le dashboard
+            const dashboardFilters = this.extractDashboardFilters(searchDomain);
+            
+            // Vérifier si tous les filtres sont vides (réinitialisation complète)
+            const hasAnyActiveFilter = Object.values(dashboardFilters).some(value => {
+                if (Array.isArray(value)) return value.length > 0;
+                if (value === null || value === undefined) return false;
+                if (typeof value === 'object') return Object.keys(value).length > 0;
+                if (typeof value === 'string') return value.trim().length > 0;
+                return true;
+            });
+            
+            console.log('🎯 SEARCH: Filtres extraits pour dashboard:', {
+                filters: dashboardFilters,
+                hasActiveFilters: hasAnyActiveFilter,
+                isCompleteReset: !hasAnyActiveFilter && searchDomain.length === 0
+            });
+            
+            // IMPORTANT: Toujours notifier le dashboard - même pour les réinitialisations
+            const eventData = {
+                ...dashboardFilters,
+                searchDomain: searchDomain,
+                timestamp: Date.now(),
+                source: 'search',
+                isCompleteReset: !hasAnyActiveFilter && searchDomain.length === 0
+            };
+            
+            console.log('📡 SEARCH: Émission événement vers dashboard (incluant reset):', eventData);
+            
+            // Émettre l'événement pour le dashboard
+            const event = new CustomEvent('search-filter-changed', {
+                detail: eventData
+            });
+            
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(event);
+                console.log('🌍 SEARCH: Événement émis via window');
+            }
+            
+            if (this.env.bus) {
+                this.env.bus.trigger('search-filter-changed', eventData);
+                console.log('🚌 SEARCH: Événement émis via bus');
+            }
+            
+        } catch (error) {
+            console.error('❌ SEARCH: Erreur notification dashboard:', error);
+        }
+    }
+    
+    extractDashboardFilters(searchDomain) {
+        const filters = {
+            caisseIds: null,
+            monthId: null,
+            projectIds: null,
+            dateRange: null,
+            userIds: null,
+            expenseType: null,
+            validationStatus: null,
+            hasAttachments: null,
+            amountCondition: null,
+            generalSearch: null
+        };
+        
+        try {
+            console.log('🔍 EXTRACT: Analyse COMPLETE du domaine search:', searchDomain);
+            
+            // Parcourir le domaine pour extraire TOUS les filtres pertinents
+            for (const condition of searchDomain) {
+                if (Array.isArray(condition) && condition.length >= 3) {
+                    const [field, operator, value] = condition;
+                    
+                    console.log('🔍 EXTRACT: Condition analysée:', { field, operator, value, type: typeof value });
+                    
+                    // 1. Filtres de caisse - toutes les variantes possibles
+                    if (field === 'expense_account_id') {
+                        if (operator === 'in' && Array.isArray(value)) {
+                            filters.caisseIds = value;
+                            console.log('✅ EXTRACT: Filtre caisse IN trouvé:', value);
+                        } else if (operator === '=' && typeof value === 'number') {
+                            filters.caisseIds = [value];
+                            console.log('✅ EXTRACT: Filtre caisse = trouvé:', value);
+                        } else if (operator === 'ilike' && typeof value === 'string') {
+                            console.log('⚠️ EXTRACT: Recherche par nom caisse:', value);
+                            filters.generalSearch = value;
+                        }
+                    }
+                    
+                    // 2. Filtres de projet - TOUTES les variantes
+                    else if (field === 'project_id') {
+                        if (operator === 'in' && Array.isArray(value)) {
+                            filters.projectIds = value;
+                            console.log('✅ EXTRACT: Filtre projet IN trouvé:', value);
+                        } else if (operator === '=' && typeof value === 'number') {
+                            filters.projectIds = [value];
+                            console.log('✅ EXTRACT: Filtre projet = trouvé:', value);
+                        } else if (operator === 'ilike' && typeof value === 'string') {
+                            console.log('⚠️ EXTRACT: Recherche par nom projet:', value);
+                            filters.generalSearch = value;
+                        } else if (operator !== false && value) {
+                            // Autres opérateurs pour projet
+                            console.log('✅ EXTRACT: Filtre projet autre opérateur:', { operator, value });
+                            if (typeof value === 'number') {
+                                filters.projectIds = [value];
+                            } else if (Array.isArray(value)) {
+                                filters.projectIds = value;
+                            }
+                        }
+                    }
+                    
+                    // 3. Filtres d'utilisateur - TOUTES les variantes
+                    else if (field === 'user_id') {
+                        if (operator === 'in' && Array.isArray(value)) {
+                            filters.userIds = value;
+                            console.log('✅ EXTRACT: Filtre utilisateur IN trouvé:', value);
+                        } else if (operator === '=' && typeof value === 'number') {
+                            filters.userIds = [value];
+                            console.log('✅ EXTRACT: Filtre utilisateur = trouvé:', value);
+                        } else if (operator === 'ilike' && typeof value === 'string') {
+                            console.log('⚠️ EXTRACT: Recherche par nom utilisateur:', value);
+                            filters.generalSearch = value;
+                        }
+                    }
+                    
+                    // 4. Filtres de type de dépense - TOUTES les variantes
+                    else if (field === 'expense_move_type') {
+                        if (operator === '=' && typeof value === 'string') {
+                            filters.expenseType = value;
+                            console.log('✅ EXTRACT: Filtre type dépense trouvé:', value);
+                        } else if (operator === 'in' && Array.isArray(value)) {
+                            filters.expenseType = value[0]; // Prendre le premier
+                            console.log('✅ EXTRACT: Filtre type dépense IN trouvé:', value);
+                        }
+                    }
+                    
+                    // 4bis. Filtres de validation - NOUVEAU
+                    else if (field === 'validate_by_administrator') {
+                        filters.validationStatus = value;
+                        console.log('✅ EXTRACT: Filtre validation trouvé:', value);
+                    }
+                    
+                    // 4ter. Filtres de pièces jointes - NOUVEAU 
+                    else if (field === 'attachment_ids') {
+                        if (operator === '!=' && value === false) {
+                            filters.hasAttachments = true;
+                            console.log('✅ EXTRACT: Filtre avec pièces jointes trouvé');
+                        } else if (operator === '=' && value === false) {
+                            filters.hasAttachments = false;
+                            console.log('✅ EXTRACT: Filtre sans pièces jointes trouvé');
+                        }
+                    }
+                    
+                    // 4quater. Filtres de montant - NOUVEAU
+                    else if (field === 'total_amount') {
+                        if (operator === '>' && typeof value === 'number') {
+                            filters.amountCondition = { operator: '>', value: value };
+                            console.log('✅ EXTRACT: Filtre montant > trouvé:', value);
+                        } else if (operator === '=' && typeof value === 'number') {
+                            filters.amountCondition = { operator: '=', value: value };
+                            console.log('✅ EXTRACT: Filtre montant = trouvé:', value);
+                        } else if (operator === '<' && typeof value === 'number') {
+                            filters.amountCondition = { operator: '<', value: value };
+                            console.log('✅ EXTRACT: Filtre montant < trouvé:', value);
+                        }
+                    }
+                    
+                    // 5. Filtres de mois
+                    else if (field === 'caisse_mois_id') {
+                        if (operator === '=' && typeof value === 'number') {
+                            filters.monthId = value;
+                            console.log('✅ EXTRACT: Filtre mois trouvé:', value);
+                        } else if (operator === 'in' && Array.isArray(value) && value.length === 1) {
+                            filters.monthId = value[0];
+                            console.log('✅ EXTRACT: Filtre mois IN trouvé:', value[0]);
+                        }
+                    }
+                    
+                    // 6. Filtres de date - TOUTES les variantes
+                    else if (field === 'date') {
+                        if (operator === '>=' || operator === '>' || operator === '<=' || operator === '<') {
+                            if (!filters.dateRange) filters.dateRange = {};
+                            if (operator === '>=' || operator === '>') {
+                                filters.dateRange.start = value;
+                            } else {
+                                filters.dateRange.end = value;
+                            }
+                            console.log('✅ EXTRACT: Filtre date trouvé:', { operator, value });
+                        } else if (operator === '=' && typeof value === 'string') {
+                            filters.dateRange = { start: value, end: value };
+                            console.log('✅ EXTRACT: Filtre date exacte trouvé:', value);
+                        }
+                    }
+                    
+                    // 7. Recherche générale - CAPTURE TOUT
+                    else if (field === 'name' && operator === 'ilike' && typeof value === 'string') {
+                        filters.generalSearch = value;
+                        console.log('✅ EXTRACT: Recherche générale par nom:', value);
+                    }
+                    
+                    // 8. Autres champs potentiels
+                    else if (value !== false && value !== null && value !== undefined) {
+                        console.log('⚠️ EXTRACT: Champ non géré détecté:', { field, operator, value });
+                    }
+                }
+            }
+            
+            // Résumé des filtres extraits
+            const activeFiltersCount = Object.values(filters).filter(v => v !== null).length;
+            console.log('✅ EXTRACT: RESUME - Filtres extraits (' + activeFiltersCount + ' actifs):', filters);
+            
+        } catch (error) {
+            console.error('❌ EXTRACT: Erreur extraction filtres:', error);
+        }
+        
+        return filters;
+    }
+}
+
+// Enregistrement de la vue
+registry.category('views').add('expense_spending_dashboard_tree', {
+    ...listView,
+    Renderer: ExpenseDashboardListRenderer,
+    Controller: ExpenseDashboardListController,
+});
+
+console.log('✅ Vue avec renderer et controller synchronisés enregistrés');
+
+// Debug: vérifier l'enregistrement
+setTimeout(() => {
+    const registered = registry.category('views').get('expense_spending_dashboard_tree', null);
+    if (registered) {
+        console.log('✅ REGISTER: Vue correctement enregistrée dans le registre');
+    } else {
+        console.error('❌ REGISTER: Échec enregistrement de la vue');
+    }
+}, 100);
