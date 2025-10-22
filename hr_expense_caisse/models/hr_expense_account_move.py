@@ -137,14 +137,6 @@ class HrExpenseAccountMove(models.Model):
             else:
                 values['name'] = self.env['ir.sequence'].next_by_code('expense.replenishment') or _("New")
 
-        # Gestion des réapprovisionnements (paiement automatique)
-        # if values.get('expense_move_type') != 'spent':
-        #     try:
-        #         values['payment_id'] = self.create_payment(values)
-        #     except Exception as e:
-        #         raise UserError(_("Erreur lors de la création du paiement: %s") % str(e))
-
-        # Gestion de la date + caisse mensuelle
         current_date = values.get("date")
         if current_date and values.get("expense_account_id"):
             try:
@@ -192,15 +184,6 @@ class HrExpenseAccountMove(models.Model):
         if res.date and res.expense_account_id:
             res.Settlement_of_monthly_accounts(res.date, res.expense_account_id.id)
 
-        # Abonnement au responsable de la caisse
-        # if (values.get('expense_move_type') == 'spent' and
-        #     res.caisse_manager_id and
-        #     res.caisse_manager_id.partner_id):
-        #     try:
-        #         res.message_subscribe(partner_ids=[res.caisse_manager_id.partner_id.id])
-        #     except Exception as e:
-        #         _logger.warning("Erreur lors de l'abonnement du responsable: %s", str(e))
-
         return res
 
     # @api.constrains("total_amount")
@@ -208,7 +191,7 @@ class HrExpenseAccountMove(models.Model):
     #     for rec in self:
     #         if rec.expense_account_id.balance < 0 and rec.expense_move_type == 'spent':
     #             raise ValidationError(_("vous n'avez pas suffisamment de solde pour effectuer cette transaction."))
-   
+
     @api.model
     def get_expense_dashboard(self, selected_caisse_ids=None, selected_month_id=None):
         """Dashboard simple pour afficher les statistics de base avec filtre par mois"""

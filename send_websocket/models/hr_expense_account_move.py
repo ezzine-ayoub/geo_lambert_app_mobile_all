@@ -10,7 +10,7 @@ class HrExpenseAccountMove(models.Model):
     def _send_cashbox_expense_update(self, event_type='created'):
         """
         Émet un événement WebSocket vers le canal privé de la caisse
-        Canal: geo_lambert_expense_caise_{case_id}_{user_id}
+        Canal: geo_lambert_expense_caisse_{case_id}_{user_id}
         """
         for move in self:
             try:
@@ -47,7 +47,7 @@ class HrExpenseAccountMove(models.Model):
                     continue
 
                 # ✅ Construire le canal privé
-                channel = f"geo_lambert_expense_caise_{case_id}_{user_id}"
+                channel = f"geo_lambert_expense_caisse_{case_id}_{user_id}"
 
                 # ✅ Préparer le payload avec event_type inclus
                 payload = {
@@ -63,6 +63,13 @@ class HrExpenseAccountMove(models.Model):
                     'create_date': move.create_date.isoformat() if move.create_date else False,
                     'write_date': move.write_date.isoformat() if move.write_date else False,
                 }
+                
+                # ✅ Ajouter l'utilisateur s'il existe
+                if hasattr(move, 'user_id') and move.user_id:
+                    payload['user_id'] = [
+                        move.user_id.id,
+                        move.user_id.name
+                    ]
 
                 # ✅ Ajouter task_id si disponible (array d'objets comme l'API)
                 if hasattr(move, 'task_id') and move.task_id:
@@ -182,7 +189,7 @@ class HrExpenseAccountMove(models.Model):
         # ✅ 1. Émettre vers le canal privé de la caisse APRÈS suppression
         for info in expense_info:
             try:
-                channel = f"geo_lambert_expense_caise_{info['case_id']}_{info['user_id']}"
+                channel = f"geo_lambert_expense_caisse_{info['case_id']}_{info['user_id']}"
                 payload = {
                     'event_type': 'deleted',
                     'id': info['id'],

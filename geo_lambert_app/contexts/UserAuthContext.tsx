@@ -57,8 +57,9 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
   // ✅ CORRECTION: Fonction utilitaire pour gérer les erreurs
   const handleError = useCallback((error: any, context: string) => {
+    console.error(`❌ [UserAuth] Erreur ${context}:`, error);
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-    setError(errorMessage); // Juste le message d'erreur, sans le contexte
+    setError(`${context}: ${errorMessage}`);
   }, []);
 
   // 🔄 Vérifier l'authentification au démarrage
@@ -67,12 +68,16 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     
     const checkAuthStatus = async () => {
       try {
+        console.log('🔍 [UserAuth] Vérification du statut d\'authentification...');
         setIsLoading(true);
         setError(null);
 
-      // Vérifier si une session est active
+        
+        // Vérifier si une session est active
         const isAuth = await authService.isAuthenticated();
         const isValid = await authService.isSessionValid();
+        
+        console.log('🔍 [UserAuth] État authentification:', { isAuth, isValid });
         
         if (!isMounted) return;
 
@@ -82,7 +87,12 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
             const authData = await authService.getStoredAuthData();
             const credentials = await authService.getStoredCredentials();
             
-            // Données récupérées
+            console.log('🔍 [UserAuth] Données récupérées:', { 
+              hasAuthData: !!authData, 
+              hasCredentials: !!credentials,
+              authSuccess: authData?.success,
+              userDisplay: authData?.user_info?.display_name
+            });
             
             if (authData && credentials && authData.success && isMounted) {
               const userData: UserAuthData = {
@@ -99,15 +109,16 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
               setUserAuth(userData);
               setSessionValid(true);
+              console.log(`✅ [UserAuth] Session restaurée pour: ${authData.user_info.display_name}`);
             } else {
-              // Données de session incomplètes
+              console.log('⚠️ [UserAuth] Données de session incomplètes ou invalides');
               if (isMounted) {
                 setUserAuth(null);
                 setSessionValid(false);
               }
             }
-          } catch {
-          // Erreur récupération session
+          } catch (sessionError) {
+            console.error('❌ [UserAuth] Erreur récupération session:', sessionError);
             if (isMounted) {
               setUserAuth(null);
               setSessionValid(false);
@@ -115,15 +126,15 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
             }
           }
         } else {
-          // Aucune session valide
+          console.log('❌ [UserAuth] Aucune session valide trouvée');
           if (isMounted) {
             setUserAuth(null);
             setSessionValid(false);
           }
         }
 
-      } catch {
-      // Erreur vérification statut
+      } catch (error) {
+        console.error('❌ [UserAuth] Erreur vérification statut:', error);
         if (isMounted) {
           setUserAuth(null);
           setSessionValid(false);
@@ -148,28 +159,31 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     try {
       setIsLoading(true);
       setError(null);
+      console.log(`🔐 [UserAuth] Tentative de connexion pour: ${username}`);
 
-      // Validation des paramètres
+      // ✅ CORRECTION: Validation des paramètres
       if (!username.trim() || !password.trim()) {
         throw new Error('Nom d\'utilisateur et mot de passe requis');
       }
 
-      // Récupérer l'URL du serveur configurée
+      // ✅ CORRECTION: Récupérer l'URL du serveur configurée
       let serverUrl = 'https://ce791a46916a.ngrok-free.app'; // URL par défaut
       
       try {
+        // Essayer de récupérer depuis AsyncStorage la config serveur
         const storedData = await AsyncStorage.getItem('@geo_lambert_server_config');
         if (storedData) {
           const serverConfig = JSON.parse(storedData);
           if (serverConfig.data && serverConfig.data.server_url) {
             serverUrl = serverConfig.data.server_url;
+            console.log('🔧 [UserAuth] URL serveur récupérée depuis config:', serverUrl);
           }
         }
-      } catch {
-        // Utiliser URL par défaut
+      } catch (configError) {
+        console.log('🔧 [UserAuth] Utilisation URL serveur par défaut:', serverUrl);
       }
 
-      // Authentifier via authService
+      // Authentifier via authService avec l'URL du serveur
       const authData = await authService.authenticate({
         username: username.trim(),
         password,
@@ -178,9 +192,16 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       });
 
       if (authData.success && authData.user_info) {
+        // ✅ CORRECTION: S'assurer que les credentials sont ajoutées
+        const completeAuthData = {
+          ...authData,
+          CREDENTIALS: authData.CREDENTIALS || { username, password }
+        };
+        
+        // Mettre à jour l'état global
         const userData: UserAuthData = {
-          success: authData.success,
-          user_info: authData.user_info,
+          success: completeAuthData.success,
+          user_info: completeAuthData.user_info,
           CREDENTIALS: { username, password },
           db,
           timestamp: Date.now(),
@@ -189,37 +210,18 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
         setUserAuth(userData);
         setSessionValid(true);
+        
+        console.log(`✅ [UserAuth] Connexion réussie: ${completeAuthData.user_info.display_name}`);
         return true;
       } else {
-        // ❌ AUTHENTIFICATION ÉCHOUÉE - Nettoyer l'état
         const errorMsg = authData.message || 'Identifiants incorrects';
         setError(errorMsg);
-        setUserAuth(null);
-        setSessionValid(false);
-        
-        // ❌ Nettoyer le storage en cas d'échec (silencieusement)
-        try {
-          await authService.logout();
-        } catch {
-          // Ignorer les erreurs de nettoyage
-        }
-        
+        console.log('❌ [UserAuth] Connexion échouée:', errorMsg);
         return false;
       }
       
     } catch (error) {
-      // ❌ ERREUR CRITIQUE - Nettoyer complètement l'état
       handleError(error, 'Connexion');
-      setUserAuth(null);
-      setSessionValid(false);
-      
-      // Nettoyer le storage (silencieusement)
-      try {
-        await authService.logout();
-      } catch {
-        // Ignorer les erreurs de nettoyage
-      }
-      
       return false;
     } finally {
       setIsLoading(false);
@@ -229,15 +231,18 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
   // 🚪 Fonction de déconnexion avec gestion d'erreurs
   const logout = useCallback(async (): Promise<void> => {
     try {
-    setIsLoading(true);
-    setError(null);
-    
-    // Déconnecter via authService
-    await authService.logout();
+      setIsLoading(true);
+      setError(null);
+      console.log('🚪 [UserAuth] Déconnexion en cours...');
+      
+      // Déconnecter via authService
+      await authService.logout();
 
-        // Nettoyer l'état global
-    setUserAuth(null);
-    setSessionValid(false);
+      // Nettoyer l'état global
+      setUserAuth(null);
+      setSessionValid(false);
+      
+      console.log('✅ [UserAuth] Déconnexion terminée');
       
     } catch (error) {
       handleError(error, 'Déconnexion');
@@ -252,6 +257,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
   // 🔄 Rafraîchir la session avec gestion d'erreurs
   const refreshSession = useCallback(async (): Promise<void> => {
     try {
+      console.log('🔄 [UserAuth] Rafraîchissement de la session...');
       setError(null);
 
       // Mettre à jour le timestamp local
@@ -261,6 +267,8 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
           timestamp: Date.now()
         } : null);
       }
+      
+      console.log('✅ [UserAuth] Session rafraîchie');
       
     } catch (error) {
       handleError(error, 'Rafraîchissement session');

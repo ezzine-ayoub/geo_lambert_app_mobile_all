@@ -143,7 +143,6 @@ class ProjectTask(models.Model):
         self._send_project_update(event_type='updated')
         return res
 
-
     def action_timer_start(self):
         res = super(ProjectTask, self).action_timer_start()
         channel = f'geo_lambert_tasks_user_id_{self.env.user.id}'
@@ -229,7 +228,8 @@ class ProjectTask(models.Model):
                             'display_name': expense.expense_type_id.display_name,
                             'name': expense.expense_type_id.name,
                         }] if hasattr(expense, 'expense_type_id') and expense.expense_type_id else [],
-                        'currency_id': [expense.currency_id.id, expense.currency_id.name] if expense.currency_id else [],
+                        'currency_id': [expense.currency_id.id,
+                                        expense.currency_id.name] if expense.currency_id else [],
                     })
                 except Exception:
                     # Si une erreur survient lors de la lecture d'une dépense, l'ignorer
@@ -241,7 +241,7 @@ class ProjectTask(models.Model):
             timesheets = self.env['account.analytic.line'].search([
                 ('task_id', '=', self.id)
             ], order='date desc')
-            
+
             for timesheet in timesheets:
                 try:
                     timesheet_list.append({
@@ -250,8 +250,10 @@ class ProjectTask(models.Model):
                         'date': timesheet.date.isoformat() if timesheet.date else False,
                         'unit_amount': timesheet.unit_amount or 0.0,
                         'amount': timesheet.amount or 0.0,
-                        'employee_id': [timesheet.employee_id.id, timesheet.employee_id.name] if timesheet.employee_id else [],
-                        'project_id': [timesheet.project_id.id, timesheet.project_id.name] if timesheet.project_id else [],
+                        'employee_id': [timesheet.employee_id.id,
+                                        timesheet.employee_id.name] if timesheet.employee_id else [],
+                        'project_id': [timesheet.project_id.id,
+                                       timesheet.project_id.name] if timesheet.project_id else [],
                         'task_id': [self.id, self.name],
                     })
                 except Exception:
@@ -267,7 +269,7 @@ class ProjectTask(models.Model):
             expense_moves = self.env['hr.expense.account.move'].search([
                 ('task_id', '=', self.id)
             ], order='date desc')
-            
+
             for expense_move in expense_moves:
                 try:
                     expense_move_list.append({
@@ -277,11 +279,14 @@ class ProjectTask(models.Model):
                         'date': expense_move.date.isoformat() if expense_move.date else False,
                         'total_amount': expense_move.total_amount or 0.0,
                         # ✅ IMPORTANT: Ajouter solde_amount pour que TypeScript calcule correctement
-                        'solde_amount': expense_move.solde_amount if hasattr(expense_move, 'solde_amount') else (expense_move.total_amount or 0.0),
+                        'solde_amount': expense_move.solde_amount if hasattr(expense_move, 'solde_amount') else (
+                                    expense_move.total_amount or 0.0),
                         # ✅ Ajouter balance aussi comme fallback
-                        'balance': expense_move.balance if hasattr(expense_move, 'balance') else (expense_move.total_amount or 0.0),
+                        'balance': expense_move.balance if hasattr(expense_move, 'balance') else (
+                                    expense_move.total_amount or 0.0),
                         # ✅ Ajouter amount comme fallback
-                        'amount': expense_move.amount if hasattr(expense_move, 'amount') else (expense_move.total_amount or 0.0),
+                        'amount': expense_move.amount if hasattr(expense_move, 'amount') else (
+                                    expense_move.total_amount or 0.0),
                         'expense_move_type': expense_move.expense_move_type or 'spent',
                         'expense_category_id': {
                             'id': expense_move.expense_category_id.id,
