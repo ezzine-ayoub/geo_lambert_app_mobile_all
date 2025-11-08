@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { router, useSegments } from 'expo-router';
+import { router, useSegments, usePathname } from 'expo-router';
 import { useUserAuth } from '../contexts/UserAuthContext';
 
 interface AuthGuardProps {
@@ -8,25 +8,58 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, error } = useUserAuth();
+  const { isAuthenticated, isLoading, error, clearError, sessionValid } = useUserAuth();
   const segments = useSegments();
+  const pathname = usePathname();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !error) {
-      const inAuthGroup = segments[0] === '(tabs)';
-      const inLoginPage = segments.includes('login');
-      
-      if (!isAuthenticated && inAuthGroup) {
-        // Utilisateur non authentifié essayant d'accéder aux pages protégées
-        console.log('🚫 Accès refusé - Redirection vers login');
-        router.replace('/login');
-      } else if (isAuthenticated && inLoginPage) {
-        // Utilisateur authentifié sur la page login
-        console.log('✅ Utilisateur déjà connecté - Redirection vers home');
-        router.replace('/(tabs)');
-      }
+    // Ne rien faire pendant le chargement initial
+    if (isLoading) {
+      return;
     }
-  }, [isAuthenticated, isLoading, segments, error]);
+
+    const inAuthGroup = segments[0] === '(tabs)';
+    const isOnLoginPage = pathname === '/login' || segments.includes('login');
+
+    // CAS 1: Erreur d'authentification -> Redirection vers login
+    if (error && !isAuthenticated && !isOnLoginPage && !hasRedirected) {
+      setHasRedirected(true);
+      clearError();
+      router.replace('/login');
+      return;
+    }
+
+    // CAS 2: Non authentifié + Accès zone protégée -> Redirection login
+    if (!isAuthenticated && inAuthGroup && !hasRedirected) {
+      setHasRedirected(true);
+      clearError();
+      router.replace('/login');
+      return;
+    }
+
+    // CAS 3: Session invalide + Zone protégée -> Redirection login
+    if (!sessionValid && inAuthGroup && !hasRedirected) {
+      setHasRedirected(true);
+      clearError();
+      router.replace('/login');
+      return;
+    }
+
+    // CAS 4: Authentifié + Sur page login -> Redirection tabs
+    if (isAuthenticated && sessionValid && isOnLoginPage && !hasRedirected) {
+      setHasRedirected(true);
+      clearError();
+      router.replace('/(tabs)');
+      return;
+    }
+
+    // Réinitialiser le flag de redirection si on arrive sur une nouvelle page
+    if (hasRedirected && !isLoading) {
+      setHasRedirected(false);
+    }
+
+  }, [isAuthenticated, isLoading, segments, pathname, error, sessionValid, clearError, hasRedirected]);
 
   // Écran de chargement pendant la vérification auth
   if (isLoading) {
@@ -38,12 +71,12 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  // Écran d'erreur si problème d'authentification
+  // ❌ Si erreur persistante, afficher l'écran de chargement (la redirection est en cours)
   if (error && !isAuthenticated) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>Erreur d'authentification</Text>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#dc2626" />
+        <Text style={styles.errorText}>Redirection...</Text>
       </View>
     );
   }
@@ -64,24 +97,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontWeight: '500',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#dc2626',
-    padding: 20,
-  },
-  errorTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
   errorText: {
     color: '#ffffff',
-    fontSize: 14,
-    textAlign: 'center',
-    opacity: 0.9,
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: '500',
   },
 });

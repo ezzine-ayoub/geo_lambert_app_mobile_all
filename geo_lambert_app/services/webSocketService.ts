@@ -1,33 +1,29 @@
-// WebSocket Service - Geo Lambert Project Management
+// WebSocket Service - Geo Lambert Project Management - CANAL UNIFIÉ
 import { getCurrentWebSocketUrl } from "./config/configService";
 import io, { Socket } from "socket.io-client";
-import projectService from "@/services/projectService";
+import projectCategoryService, { emitCategoriesUpdate } from "@/services/projectCategoryService";
 import { authService } from "@/services/authService";
 import { AppState, AppStateStatus } from 'react-native';
 
-// ==================== SERVICE WEBSOCKET ====================
+// ==================== SERVICE WEBSOCKET UNIFIÉ ====================
 
 class WebSocketService {
     private name_project = "geo_lambert";
     private socket: Socket | null = null;
     private authuser: string | null = null;
-    private pendingSubscriptions: (() => void)[] = []; // Private subscriptions waiting for auth
-    private pendingPublicSubscriptions: (() => void)[] = []; // Public subscriptions waiting for socket connection
+    private pendingSubscriptions: (() => void)[] = [];
     private appState: AppStateStatus = 'active';
-    
+
     async connect(): Promise<void> {
         if (this.socket && this.socket.connected) return;
         
-        // Initialiser la gestion de l'état de l'app si pas déjà fait
         this.setupAppStateHandling();
         
-        // Utiliser l'URL WebSocket configurée
         const wsUrl = getCurrentWebSocketUrl();
         
         console.log('🔗 Connexion WebSocket Geo Lambert à:', wsUrl);
         
         this.socket = io(wsUrl, {
-            // Options pour maintenir la connexion
             forceNew: true,
             transports: ['websocket', 'polling'],
             timeout: 60000,
@@ -38,47 +34,33 @@ class WebSocketService {
         });
 
         this.socket.on("connect", async () => {
-            console.log("🔗 Début de la connexion WebSocket...");
+            console.log("🔗 Connexion WebSocket établie");
 
-            // 1. EXÉCUTER IMMÉDIATEMENT LES SOUSCRIPTIONS PUBLIQUES
-            console.log("📡 Exécution des souscriptions publiques (sans auth):", this.pendingPublicSubscriptions.length);
-            this.pendingPublicSubscriptions.forEach((subscription, index) => {
-                console.log("🌐 Exécution souscription publique #" + (index + 1));
-                subscription();
-            });
-            this.pendingPublicSubscriptions = [];
-            console.log("✅ Toutes les souscriptions publiques ont été exécutées");
-
-            // 2. ESSAYER D'AUTHENTIFIER ET EXÉCUTER LES SOUSCRIPTIONS PRIVÉES
             try {
                 let user = await authService.getCurrentUser();
                 console.log("📤 Récupération utilisateur:", user);
 
-                // Vérifier si c'est déjà un objet ou une chaîne
                 if (typeof user === 'string') {
-                    console.log("🔄 Parsing JSON nécessaire...");
                     user = JSON.parse(user);
-                } else {
-                    console.log("✅ Objet déjà parsé, pas de JSON.parse nécessaire");
                 }
 
                 // @ts-ignore
                 this.authuser = user.id
 
-                // Exécuter les souscriptions privées en attente
-                console.log("🔒 Souscriptions privées en attente:", this.pendingSubscriptions.length);
+                console.log(`✅ User authentifié: ${this.authuser}`);
+                
+                // Exécuter les souscriptions en attente
+                console.log("🔒 Souscriptions en attente:", this.pendingSubscriptions.length);
                 this.pendingSubscriptions.forEach((subscription, index) => {
-                    console.log("🎯 Exécution souscription privée #" + (index + 1));
+                    console.log("🎯 Exécution souscription #" + (index + 1));
                     subscription();
                 });
                 this.pendingSubscriptions = [];
-                console.log("✅ Toutes les souscriptions privées ont été exécutées");
+                console.log("✅ Toutes les souscriptions ont été exécutées");
                 
             } catch (error) {
                 console.error('❌ Erreur lors de l\'authentification:', error);
-                console.log('⚠️ Seules les souscriptions publiques sont actives');
             }
-
         });
 
         this.socket.on("disconnect", async (reason) => {
@@ -89,18 +71,17 @@ class WebSocketService {
             console.error("❌ Erreur connexion WS:", err.message);
         });
     }
+
     disconnect(): void {
         this.socket?.disconnect();
         this.socket = null;
         this.authuser = null;
-
-        // Nettoyer TOUTES les souscriptions en attente
-        this.pendingSubscriptions = []; // Private subscriptions
-        this.pendingPublicSubscriptions = []; // Public subscriptions
-        console.log('✅ WebSocket déconnecté et nettoyé (souscriptions privées et publiques)');
+        this.pendingSubscriptions = [];
+        console.log('✅ WebSocket déconnecté et nettoyé');
     }
+
     private setupAppStateHandling(): void {
-        if (this.appState !== 'active') return; // Déjà configuré
+        if (this.appState !== 'active') return;
         
         console.log('📱 Configuration de la gestion d\'état de l\'app...');
         
@@ -109,293 +90,391 @@ class WebSocketService {
         
         console.log('✅ Gestion d\'état de l\'app activée, état actuel:', this.appState);
     }
-    private handleAppStateChange = (nextAppState: AppStateStatus) => {
 
+    private handleAppStateChange = (nextAppState: AppStateStatus) => {
         this.appState = nextAppState;
     };
+
     subscribe(event: string, callback: (msg: any) => void): void {
         this.socket?.on(event, callback);
     }
+
     /**
-     * Souscription aux mises à jour de tâches
+     * 🔥 CANAL UNIFIÉ: Souscription au canal unique qui reçoit TOUT
+     * geo_lambert_category_projects_{user_id}
+     * 
+     * Ce canal reçoit:
+     * - Les catégories (model: 'project.category')
+     * - Les projets (model: 'project.project')
+     * - Les tâches (model: 'project.task')
      */
-    onTaskUpdate(callback: (task: any) => void): void {
-        console.log("🚀 Méthode onTaskUpdate() appelée");
-        console.log("🔍 État actuel authuser:", this.authuser);
-        console.log("🔍 État socket connecté:", this.socket?.connected);
-        
-        const subscribeToTasks = () => {
-            console.log("🎯 Début subscribeToTasks()...");
-
+    onUnifiedChannelUpdate(callbacks: {
+        onCategoryUpdate?: (category: any) => void;
+        onProjectUpdate?: (project: any) => void;
+        onTaskUpdate?: (task: any) => void;
+    }): void {
+        const subscribeToUnifiedChannel = () => {
             if (!this.authuser) {
-                console.error('❌ Impossible de créer le canal privé tâches: utilisateur non authentifié');
-                console.log('📊 État debug - authuser:', this.authuser);
+                console.log('⚠️ Pas d\'authentification pour le canal unifié');
                 return;
             }
 
-            const privateTaskChannel = `${this.name_project}_tasks_user_id_${this.authuser}`;
-            console.log('🔒 CRÉATION DU CANAL PRIVÉ TÂCHES:', privateTaskChannel);
-            console.log('✨ Canal créé avec succès pour l\'utilisateur ID:', this.authuser);
-
-            this.subscribe(privateTaskChannel, async (data: any) => {
-                try {
-                    console.log('🎉 MESSAGE TÂCHE REÇU SUR LE CANAL PRIVÉ:', privateTaskChannel);
-                    console.log('📋 Données tâche reçues du socket:', JSON.stringify(data, null, 2));
-
-                    // Vérifier si les données sont déjà parsées
-                    let parsedTask;
-                    if (typeof data === 'string') {
-                        console.log('🔄 Parsing JSON nécessaire...');
-                        parsedTask = JSON.parse(data);
-                    } else {
-                        console.log('✅ Données déjà parsées');
-                        parsedTask = data;
-                    }
-
-                    console.log('🔄 Tâche parsée:', parsedTask);
-
-                    // Traiter selon le type d'événement
-                    const eventType = parsedTask.event_type || 'updated';
-                    console.log('📝 Type d\'événement tâche:', eventType);
-
-                    let success = false;
-
-                    switch (eventType) {
-                        case 'created':
-                        case 'updated':
-                        case 'sync':
-                        case 'started':
-                        case 'stopped':
-                        case 'state_changed':
-                            success = await projectService.insertOrUpdateTask(parsedTask);
-                            break;
-
-                        case 'deleted':
-                            success = await projectService.deleteTask(parsedTask.id);
-                            break;
-
-                        default:
-                            console.log('⚠️ Type d\'événement tâche non géré:', eventType);
-                            success = true;
-                    }
-
-                    if (success) {
-                        console.log('✅ Tâche traitée avec succès depuis socket:', parsedTask.id || parsedTask.name || 'ID inconnu');
-
-                        console.log('📤 Envoi callback tâche à l\'UI...');
-                        callback(parsedTask);
-                        console.log('✨ Callback tâche UI exécuté avec succès');
-                    } else {
-                        console.error('❌ Échec traitement tâche depuis socket:', parsedTask.id || 'ID inconnu');
-                    }
-                } catch (error) {
-                    console.error('❌ Erreur traitement tâche socket:', error);
-                    console.error('📊 Stack trace:', error);
-                }
-            });
-
-            console.log('🎯 Souscription au canal privé tâches terminée avec succès');
-        };
-
-        if (this.authuser) {
-            console.log('⚡ Utilisateur déjà authentifié, souscription tâches immédiate');
-            subscribeToTasks();
-        } else {
-            console.log('⏳ Utilisateur pas encore authentifié, ajout souscription tâches à la queue');
-            this.pendingSubscriptions.push(subscribeToTasks);
-            console.log('📝 Souscription aux tâches en attente de l\'authentification');
-            console.log('📊 Nombre de souscriptions en attente:', this.pendingSubscriptions.length);
-        }
-    }
-    onExpenseUpdate(callback: (expense: any) => void): void {
-        console.log("🚀 Méthode onExpenseUpdate() appelée");
-        console.log("🔍 État actuel authuser:", this.authuser);
-        console.log("🔍 État socket connecté:", this.socket?.connected);
-        
-        const subscribeToExpenses = () => {
-            console.log("🎯 Début subscribeToExpenses()...");
-
-            if (!this.authuser) {
-                console.error('❌ Impossible de créer le canal privé dépenses: utilisateur non authentifié');
-                console.log('📊 État debug - authuser:', this.authuser);
-                return;
-            }
-
-            const privateExpenseChannel = `${this.name_project}_expenses_user_id_${this.authuser}`;
-            console.log('🔒 CRÉATION DU CANAL PRIVÉ DÉPENSES:', privateExpenseChannel);
-            console.log('✨ Canal créé avec succès pour l\'utilisateur ID:', this.authuser);
-
-            this.subscribe(privateExpenseChannel, async (data: any) => {
-                try {
-                    console.log('🎉 MESSAGE DÉPENSE REÇU SUR LE CANAL PRIVÉ:', privateExpenseChannel);
-                    console.log('💰 Données dépense reçues du socket:', JSON.stringify(data, null, 2));
-
-                    // Vérifier si les données sont déjà parsées
-                    let parsedExpense;
-                    if (typeof data === 'string') {
-                        console.log('🔄 Parsing JSON nécessaire...');
-                        parsedExpense = JSON.parse(data);
-                    } else {
-                        console.log('✅ Données déjà parsées');
-                        parsedExpense = data;
-                    }
-
-                    console.log('🔄 Dépense parsée:', parsedExpense);
-
-                    // Traiter selon le type d'événement
-                    const eventType = parsedExpense.event_type || 'updated';
-                    console.log('📝 Type d\'événement dépense:', eventType);
-
-                    let success = false;
-
-                    switch (eventType) {
-                        case 'created':
-                        case 'updated':
-                        case 'sync':
-                            success = await projectService.insertOrUpdateExpense(parsedExpense);
-                            break;
-
-                        case 'deleted':
-                            success = await projectService.deleteExpense(parsedExpense.id);
-                            break;
-
-                        default:
-                            console.log('⚠️ Type d\'événement dépense non géré:', eventType);
-                            success = true;
-                    }
-
-                    if (success) {
-                        console.log('✅ Dépense traitée avec succès depuis socket:', parsedExpense.id || 'ID inconnu');
-
-                        console.log('📤 Envoi callback dépense à l\'UI...');
-                        callback(parsedExpense);
-                        console.log('✨ Callback dépense UI exécuté avec succès');
-                    } else {
-                        console.error('❌ Échec traitement dépense depuis socket:', parsedExpense.id || 'ID inconnu');
-                    }
-                } catch (error) {
-                    console.error('❌ Erreur traitement dépense socket:', error);
-                    console.error('📊 Stack trace:', error);
-                }
-            });
-
-            console.log('🎯 Souscription au canal privé dépenses terminée avec succès');
-        };
-
-        if (this.authuser) {
-            console.log('⚡ Utilisateur déjà authentifié, souscription dépenses immédiate');
-            subscribeToExpenses();
-        } else {
-            console.log('⏳ Utilisateur pas encore authentifié, ajout souscription dépenses à la queue');
-            this.pendingSubscriptions.push(subscribeToExpenses);
-            console.log('📝 Souscription aux dépenses en attente de l\'authentification');
-            console.log('📊 Nombre de souscriptions en attente:', this.pendingSubscriptions.length);
-        }
-    }
-    onExpenseDelete(callback: (expense: any) => void): void {
-        console.log("🚀 Méthode onExpenseDelete() appelée");
-        console.log("🔍 État actuel authuser:", this.authuser);
-        console.log("🔍 État socket connecté:", this.socket?.connected);
-
-        const subscribeToExpenseDeletes = () => {
-            console.log("🎯 Début subscribeToExpenseDeletes()...");
-
-            if (!this.authuser) {
-                console.error('❌ Impossible de créer le canal privé suppression dépenses: utilisateur non authentifié');
-                console.log('📊 État debug - authuser:', this.authuser);
-                return;
-            }
-
-            const privateExpenseDeleteChannel = `${this.name_project}_expenses_delete_user_id_${this.authuser}`;
-            console.log('🔒 CRÉATION DU CANAL PRIVÉ SUPPRESSION DÉPENSES:', privateExpenseDeleteChannel);
-            console.log('✨ Canal créé avec succès pour l\'utilisateur ID:', this.authuser);
-
-            this.subscribe(privateExpenseDeleteChannel, async (data: any) => {
-                try {
-                    console.log('🎉 MESSAGE SUPPRESSION DÉPENSE REÇU:', privateExpenseDeleteChannel);
-                    console.log('🗑️ Données suppression dépense:', JSON.stringify(data, null, 2));
-
-                    const parsedExpense = typeof data === 'string' ? JSON.parse(data) : data;
-                    console.log('🔄 Dépense à supprimer parsée:', parsedExpense);
-
-                    // Supprimer la dépense
-                    const success = await projectService.deleteExpense(parsedExpense.id);
-
-                    if (success) {
-                        console.log('✅ Dépense supprimée avec succès:', parsedExpense.id);
-
-                        callback(parsedExpense);
-                    } else {
-                        console.error('❌ Échec suppression dépense:', parsedExpense.id || 'inconnue');
-                    }
-
-                } catch (error) {
-                    console.error('❌ Erreur suppression dépense socket:', error);
-                }
-            });
-
-            console.log('🎯 Souscription au canal privé suppression dépenses terminée');
-        };
-
-        if (this.authuser) {
-            console.log('⚡ Utilisateur déjà authentifié, souscription suppression dépenses immédiate');
-            subscribeToExpenseDeletes();
-        } else {
-            console.log('⏳ Utilisateur pas encore authentifié, ajout souscription suppression dépenses à la queue');
-            this.pendingSubscriptions.push(subscribeToExpenseDeletes);
-            console.log('📝 Souscription aux suppressions dépenses en attente de l\'authentification');
-            console.log('📊 Nombre de souscriptions en attente:', this.pendingSubscriptions.length);
-        }
-    }
-    onGeoLambertAppMessage(callback: (message: any) => void): void {
-        console.log("🚀 Méthode onGeoLambertAppMessage() appelée (CANAL PUBLIC)");
-        console.log("🔍 État socket connecté:", this.socket?.connected);
-        
-        const subscribeToGeoLambertAppMessages = () => {
-            const publicGeoLambertAppMessageChannel = `message_app_${this.name_project}`;
-            console.log('📡 CRÉATION DU CANAL PUBLIC MESSAGES APP GEO LAMBERT (PAS D\'AUTH REQUISE):', publicGeoLambertAppMessageChannel);
+            // 🔥 CANAL UNIFIÉ
+            const unifiedChannel = `${this.name_project}_category_projects_${this.authuser}`;
             
-            this.subscribe(publicGeoLambertAppMessageChannel, async (data: any) => {
+            console.log('📡 Souscription au canal unifié:', unifiedChannel);
+
+            this.subscribe(unifiedChannel, async (data: any) => {
                 try {
-                    console.log('🎉 MESSAGE REÇU SUR LE CANAL PUBLIC GEO LAMBERT APP:', publicGeoLambertAppMessageChannel);
-                    console.log('📢 Données message Geo Lambert app reçues du socket:', JSON.stringify(data, null, 2));
-                    
-                    // Vérifier si les données sont déjà parsées ou sous forme de chaîne
-                    let parsedMessage;
+                    // Parser les données si nécessaire
+                    let parsedData;
                     if (typeof data === 'string') {
-                        console.log('🔄 Parsing JSON nécessaire...');
-                        parsedMessage = JSON.parse(data);
+                        parsedData = JSON.parse(data);
                     } else {
-                        console.log('✅ Données déjà parsées');
-                        parsedMessage = data;
+                        parsedData = data;
                     }
 
-                    console.log('🔄 Message Geo Lambert app parsé:', parsedMessage);
+                    // ✅ Vérification robuste du champ model
+                    const model = parsedData.model || parsedData.Model || parsedData.MODEL;
+                    const eventType = parsedData.event_type || parsedData.eventType || 'updated';
+                    const id = parsedData.id;
+                    const name = parsedData.name || parsedData.display_name || parsedData.displayName || 'Unknown';
 
-                    console.log('📤 Envoi callback message Geo Lambert app à l\'UI...');
-                    callback(parsedMessage);
-                    console.log('✨ Callback message Geo Lambert app UI exécuté avec succès');
+                    console.log('📥 Données reçues sur canal unifié:', {
+                        model: model,
+                        event_type: eventType,
+                        id: id,
+                        name: name
+                    });
+
+                    // ⚠️ Si le model est undefined, logger toutes les données pour debug
+                    if (!model) {
+                        console.error('❌ Modèle UNDEFINED reçu! Données complètes:', JSON.stringify(parsedData, null, 2));
+                        console.error('🔍 Clés disponibles:', Object.keys(parsedData));
+                        console.warn('⚠️ Modèle inconnu reçu: undefined - Ignoring message');
+                        return; // ✅ Ignorer le message au lieu de le traiter
+                    }
+
+                    // Router selon le modèle
+                    switch (model) {
+                        case 'project.category':
+                            if (callbacks.onCategoryUpdate) {
+                                await this.handleCategoryUpdate(parsedData, callbacks.onCategoryUpdate);
+                            }
+                            break;
+                        
+                        case 'project.project':
+                            if (callbacks.onProjectUpdate) {
+                                await this.handleProjectUpdate(parsedData, callbacks.onProjectUpdate);
+                            }
+                            break;
+                        
+                        case 'project.task':
+                            if (callbacks.onTaskUpdate) {
+                                await this.handleTaskUpdate(parsedData, callbacks.onTaskUpdate);
+                            }
+                            break;
+                        
+                        default:
+                            console.warn('⚠️ Modèle inconnu reçu:', model);
+                            console.log('📦 Payload complet:', JSON.stringify(parsedData, null, 2));
+                    }
 
                 } catch (error) {
-                    console.error('❌ Erreur traitement message Geo Lambert app socket:', error);
-                    console.error('📊 Stack trace:', error);
+                    console.error('❌ Erreur traitement message canal unifié:', error);
+                    console.error('📦 Données brutes:', data);
+                    console.error('🔍 Type de data:', typeof data);
                 }
             });
-
-            console.log('🎯 Souscription au canal public messages Geo Lambert app terminée avec succès');
         };
 
-        // IMPORTANT: Ce canal est PUBLIC - pas besoin d'attendre l'authentification
-        if (this.socket && this.socket.connected) {
-            console.log('⚡ Socket connecté, souscription messages Geo Lambert app immédiate (CANAL PUBLIC)');
-            subscribeToGeoLambertAppMessages();
+        // Attendre l'authentification avant de s'abonner
+        if (this.authuser) {
+            subscribeToUnifiedChannel();
         } else {
-            console.log('⏳ Socket pas encore connecté, ajout souscription publique à la queue');
-            this.pendingPublicSubscriptions.push(subscribeToGeoLambertAppMessages);
-            console.log('📝 Souscription publique aux messages Geo Lambert app en attente de la connexion socket');
-            console.log('📊 Nombre de souscriptions publiques en attente:', this.pendingPublicSubscriptions.length);
+            this.pendingSubscriptions.push(subscribeToUnifiedChannel);
         }
     }
+
+    /**
+     * 📂 Handler pour les mises à jour de catégories
+     */
+    private async handleCategoryUpdate(categoryData: any, callback: (category: any) => void): Promise<void> {
+        const eventType = categoryData.event_type || 'updated';
+        let success = false;
+
+        switch (eventType) {
+            case 'created':
+            case 'updated':
+            case 'sync':
+                success = await projectCategoryService.insertOrUpdateCategory(categoryData);
+                if (success) {
+                    console.log(`✅ Catégorie ${categoryData.id} (${categoryData.name}) mise à jour`);
+                }
+                break;
+            
+            case 'deleted':
+                success = await projectCategoryService.deleteCategory(categoryData.id);
+                if (success) {
+                    console.log(`🗑️ Catégorie ${categoryData.id} supprimée de SQLite`);
+                    // 🔄 Recharger et émettre les catégories mises à jour
+                    const response = await projectCategoryService.getProjectCategories();
+                    if (response.success && response.result) {
+                        emitCategoriesUpdate(response.result);
+                        console.log('✅ Vue mise à jour après suppression de la catégorie');
+                        return; // Sortir sans appeler callback plus bas
+                    }
+                }
+                break;
+            
+            default:
+                console.log('⚠️ Type d\'événement catégorie non géré:', eventType);
+                success = true;
+        }
+
+        if (success) {
+            callback(categoryData);
+        }
+    }
+
+    /**
+     * 📦 Handler pour les mises à jour de projets
+     */
+    private async handleProjectUpdate(projectData: any, callback: (project: any) => void): Promise<void> {
+        const eventType = projectData.event_type || 'updated';
+        let success = false;
+
+        switch (eventType) {
+            case 'created':
+            case 'updated':
+            case 'sync':
+                // Vérifier s'il y a une tâche supprimée
+                if (projectData.deleted_task_id) {
+                    console.log(`🗑️ Tâche ${projectData.deleted_task_id} supprimée du projet ${projectData.id}`);
+                }
+                
+                // Vérifier s'il y a une dépense supprimée
+                if (projectData.deleted_expense_id) {
+                    console.log(`🗑️ Dépense ${projectData.deleted_expense_id} supprimée`);
+                    if (projectData.task_id_with_deleted_expense) {
+                        console.log(`   de la tâche ${projectData.task_id_with_deleted_expense}`);
+                    }
+                }
+                
+                success = await projectCategoryService.insertOrUpdateProject(projectData);
+                if (success) {
+                    console.log(`✅ Projet ${projectData.id} mis à jour via WebSocket`);
+                }
+                break;
+            
+            case 'deleted':
+                success = await projectCategoryService.deleteProject(projectData.id);
+                if (success) {
+                    console.log(`🗑️ Projet ${projectData.id} supprimé de SQLite`);
+                    // 🔄 Recharger et émettre les catégories mises à jour
+                    const response = await projectCategoryService.getProjectCategories();
+                    if (response.success && response.result) {
+                        emitCategoriesUpdate(response.result);
+                        console.log('✅ Vue mise à jour après suppression du projet');
+                        return; // Sortir sans appeler callback plus bas
+                    }
+                }
+                break;
+            
+            default:
+                console.log('⚠️ Type d\'événement projet non géré:', eventType);
+                success = true;
+        }
+
+        if (success) {
+            callback(projectData);
+        }
+    }
+
+    /**
+     * ✅ Handler pour les mises à jour de tâches
+     */
+    private async handleTaskUpdate(taskData: any, callback: (task: any) => void): Promise<void> {
+        const eventType = taskData.event_type || 'updated';
+        let success = false;
+
+        switch (eventType) {
+            case 'created':
+            case 'updated':
+            case 'sync':
+            case 'started':
+            case 'stopped':
+            case 'state_changed':
+                // Recharger les catégories depuis SQLite pour avoir les dernières données
+                const categoriesResponse = await projectCategoryService.getProjectCategories();
+                success = categoriesResponse.success;
+                if (success) {
+                    console.log(`✅ Tâche ${taskData.id} mise à jour`);
+                }
+                break;
+            
+            case 'deleted':
+                // Pour les tâches, on recharge juste les catégories
+                const deleteResponse = await projectCategoryService.getProjectCategories();
+                success = deleteResponse.success;
+                if (success && deleteResponse.result) {
+                    emitCategoriesUpdate(deleteResponse.result);
+                    console.log(`🗑️ Tâche ${taskData.id} supprimée - Vue mise à jour`);
+                    return; // Sortir sans appeler callback plus bas
+                }
+                break;
+            
+            default:
+                console.log('⚠️ Type d\'événement tâche non géré:', eventType);
+                success = true;
+        }
+
+        if (success) {
+            callback(taskData);
+        }
+    }
+
+    /**
+     * 👤 Souscription aux mises à jour du profil utilisateur et de l'authentification
+     * 🔥 UTILISE AUSSI LE CANAL UNIFIÉ
+     */
+    onUserAuthUpdate(callback: (userData: any) => void): void {
+        const subscribeToUserAuth = () => {
+            if (!this.authuser) {
+                console.log('⚠️ Pas d\'authentification pour les mises à jour utilisateur');
+                return;
+            }
+
+            // 🔥 Réutiliser le canal unifié
+            const unifiedChannel = `${this.name_project}_category_projects_${this.authuser}`;
+            
+            console.log('📡 Souscription aux mises à jour utilisateur sur canal unifié:', unifiedChannel);
+
+            this.subscribe(unifiedChannel, async (data: any) => {
+                try {
+                    let parsedData;
+                    if (typeof data === 'string') {
+                        parsedData = JSON.parse(data);
+                    } else {
+                        parsedData = data;
+                    }
+
+                    // Filtrer seulement les messages de type user
+                    if (parsedData.model === 'res.users') {
+                        console.log('👤 Données utilisateur reçues via WebSocket');
+                        
+                        console.log('📥 Mise à jour profil utilisateur:', {
+                            id: parsedData.id,
+                            name: parsedData.display_name || parsedData.name,
+                            event_type: parsedData.event_type || 'updated',
+                            case_id: parsedData.case_id,
+                            balance: parsedData.balance
+                        });
+
+                        callback(parsedData);
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erreur traitement mise à jour utilisateur:', error);
+                }
+            });
+        };
+
+        if (this.authuser) {
+            subscribeToUserAuth();
+        } else {
+            this.pendingSubscriptions.push(subscribeToUserAuth);
+        }
+    }
+
+    /**
+     * 💰 Souscription aux mises à jour de dépenses de caisse
+     * 🔥 UTILISE AUSSI LE CANAL UNIFIÉ
+     */
+    onCashboxExpenseUpdate(callback: (data: any) => void): void {
+        const subscribeToCashboxExpenses = () => {
+            if (!this.authuser) {
+                console.log('⚠️ Pas d\'authentification pour les dépenses de caisse');
+                return;
+            }
+
+            // 🔥 Réutiliser le canal unifié
+            const unifiedChannel = `${this.name_project}_category_projects_${this.authuser}`;
+            
+            console.log('📡 Souscription aux dépenses de caisse sur canal unifié:', unifiedChannel);
+
+            this.subscribe(unifiedChannel, async (data: any) => {
+                try {
+                    let parsedData;
+                    if (typeof data === 'string') {
+                        parsedData = JSON.parse(data);
+                    } else {
+                        parsedData = data;
+                    }
+
+                    // Filtrer seulement les messages de type dépense de caisse
+                    if (parsedData.model === 'hr.expense.account.move') {
+                        console.log('💰 Données dépense de caisse reçues via WebSocket');
+                        callback(parsedData);
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erreur traitement dépense de caisse:', error);
+                }
+            });
+        };
+
+        if (this.authuser) {
+            subscribeToCashboxExpenses();
+        } else {
+            this.pendingSubscriptions.push(subscribeToCashboxExpenses);
+        }
+    }
+
+    /**
+     * 📅 Souscription aux mises à jour de mois de dépenses
+     * 🔥 UTILISE AUSSI LE CANAL UNIFIÉ
+     */
+    onExpenseMonthUpdate(callback: (data: any) => void): void {
+        const subscribeToExpenseMonths = () => {
+            if (!this.authuser) {
+                console.log('⚠️ Pas d\'authentification pour les mois de dépenses');
+                return;
+            }
+
+            // 🔥 Réutiliser le canal unifié
+            const unifiedChannel = `${this.name_project}_category_projects_${this.authuser}`;
+            
+            console.log('📡 Souscription aux mois de dépenses sur canal unifié:', unifiedChannel);
+
+            this.subscribe(unifiedChannel, async (data: any) => {
+                try {
+                    let parsedData;
+                    if (typeof data === 'string') {
+                        parsedData = JSON.parse(data);
+                    } else {
+                        parsedData = data;
+                    }
+
+                    // Filtrer seulement les messages de type mois de dépenses
+                    if (parsedData.model === 'hr.expense.month') {
+                        console.log('📅 Données mois de dépenses reçues via WebSocket');
+                        callback(parsedData);
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erreur traitement mois de dépenses:', error);
+                }
+            });
+        };
+
+        if (this.authuser) {
+            subscribeToExpenseMonths();
+        } else {
+            this.pendingSubscriptions.push(subscribeToExpenseMonths);
+        }
+    }
+
     onConnectionStatusChange(callback: (connected: boolean) => void): void {
         this.socket?.on("connect", async () => {
             callback(true);
@@ -405,12 +484,7 @@ class WebSocketService {
             callback(false);
         });
     }
-    // ==================== MÉTHODES UTILITAIRES ====================
 
-    isConnected(): boolean {
-        return this.socket?.connected || false;
-    }
-    // Unsubscribe from all events (useful for cleanup)
     unsubscribeAll(): void {
         console.log('🧹 Début du nettoyage des listeners...');
 
@@ -419,69 +493,14 @@ class WebSocketService {
             return;
         }
 
-        // Unsubscribe from private channels if user is authenticated
         if (this.authuser) {
-            // Canaux Geo Lambert Project Management
-            const privateProjectChannel = `${this.name_project}_projects_user_id_${this.authuser}`;
-            const privateTaskChannel = `${this.name_project}_tasks_user_id_${this.authuser}`;
-            const privateExpenseChannel = `${this.name_project}_expenses_user_id_${this.authuser}`;
-            const privateExpenseDeleteChannel = `${this.name_project}_expenses_delete_user_id_${this.authuser}`;
-
-            // Legacy channels
-            const privateCommandChannel = `command_user_id_${this.authuser}`;
-            const privateOrderDeleteChannel = `order_delete_user_id_${this.authuser}`;
-            const privateProductChannel = `products_user_id_${this.authuser}`;
-            const privateProductDeleteChannel = `products_delete_user_id_${this.authuser}`;
-            const privateEditProfileChannel = `edit_profil_${this.authuser}`;
-            const privateUserMessageChannel = `user_message_${this.authuser}_${this.name_project}`;
-
-            // Nettoyage canaux Geo Lambert
-            console.log('🔒 Nettoyage du canal privé projets:', privateProjectChannel);
-            this.socket.off(privateProjectChannel);
-
-            console.log('🔒 Nettoyage du canal privé tâches:', privateTaskChannel);
-            this.socket.off(privateTaskChannel);
-
-            console.log('🔒 Nettoyage du canal privé dépenses:', privateExpenseChannel);
-            this.socket.off(privateExpenseChannel);
-
-            console.log('🔒 Nettoyage du canal privé suppression dépenses:', privateExpenseDeleteChannel);
-            this.socket.off(privateExpenseDeleteChannel);
-
-            // Nettoyage canaux legacy
-            console.log('🔒 Nettoyage du canal privé commandes (legacy):', privateCommandChannel);
-            this.socket.off(privateCommandChannel);
-
-            console.log('🔒 Nettoyage du canal privé suppression commandes (legacy):', privateOrderDeleteChannel);
-            this.socket.off(privateOrderDeleteChannel);
-
-            console.log('🔒 Nettoyage du canal privé produits (legacy):', privateProductChannel);
-            this.socket.off(privateProductChannel);
-
-            console.log('🔒 Nettoyage du canal privé suppression produits (legacy):', privateProductDeleteChannel);
-            this.socket.off(privateProductDeleteChannel);
-
-            console.log('🔒 Nettoyage du canal privé édition profil:', privateEditProfileChannel);
-            this.socket.off(privateEditProfileChannel);
-
-            console.log('🔒 Nettoyage du canal privé messages utilisateur:', privateUserMessageChannel);
-            this.socket.off(privateUserMessageChannel);
+            // 🔥 Nettoyer LE canal unifié
+            const unifiedChannel = `${this.name_project}_category_projects_${this.authuser}`;
+            console.log('🔥 Nettoyage du canal unifié:', unifiedChannel);
+            this.socket.off(unifiedChannel);
         } else {
-            console.log('⚠️ Pas d\'utilisateur authentifié, pas de canaux privés à nettoyer');
+            console.log('⚠️ Pas d\'utilisateur authentifié, pas de canal à nettoyer');
         }
-
-        // Nettoyer les canaux publics
-        console.log(`📡 Nettoyage du canal public messages Geo Lambert app: message_app_${this.name_project}`);
-        this.socket.off(`message_app_${this.name_project}`);
-
-        console.log(`📡 Nettoyage du canal public messages app (legacy): message_app_${this.name_project}`);
-        this.socket.off(`message_app_${this.name_project}`);
-
-        console.log('📡 Nettoyage du canal public produits: products');
-        this.socket.off('products');
-
-        console.log(`📡 Nettoyage du canal public messages: message_${this.name_project}`);
-        this.socket.off(`message_${this.name_project}`);
 
         // Nettoyer les listeners généraux
         this.socket.off('connect');

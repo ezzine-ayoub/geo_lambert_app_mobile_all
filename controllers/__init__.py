@@ -1,0 +1,1 @@
+from . import sous_odoo_rpc_api

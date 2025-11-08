@@ -183,8 +183,15 @@ class ProjectProject(models.Model):
 # Champs calculés pour les statistiques de dépenses
     total_project_expenses = fields.Float(
         'Total dépenses projet', 
+        currency_field='currency_id',
         compute='_compute_project_expenses',
         help="Total des dépenses de toutes les tâches du projet"
+    )
+
+    currency_id = fields.Many2one(
+        'res.currency',
+        string="Devise",
+        default=lambda self: self.env.company.currency_id,
     )
     
     task_expense_count = fields.Integer(

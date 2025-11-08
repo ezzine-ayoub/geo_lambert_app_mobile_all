@@ -111,8 +111,7 @@ class HrExpenseAccountMove(models.Model):
     user_id = fields.Many2one('res.users', string="Employé/Caissier", default=lambda self: self.env.user)
     partner_id = fields.Many2one('res.partner', related='user_id.partner_id')
     expense_account_id = fields.Many2one("hr.expense.account", string="Caisse", required=False,store=True,default=lambda self: self.env.user.employee_id.caisse_id)
-    # employee_id = fields.Many2one("hr.employee", related='expense_account_id.employee_id', string="Employé", store=True)
-    employee_id = fields.Many2one("hr.employee", string="Employé",related='expense_account_id.employee_id',required=True)
+    employee_id = fields.Many2one("hr.employee", string="Employé",related='expense_account_id.employee_id',required=False)
     # caisse_manager_id = fields.Many2one('res.users', string="Responsable Caisse")
 
     attachment_ids = fields.One2many(
@@ -137,6 +136,14 @@ class HrExpenseAccountMove(models.Model):
             else:
                 values['name'] = self.env['ir.sequence'].next_by_code('expense.replenishment') or _("New")
 
+        # Gestion des réapprovisionnements (paiement automatique)
+        # if values.get('expense_move_type') != 'spent':
+        #     try:
+        #         values['payment_id'] = self.create_payment(values)
+        #     except Exception as e:
+        #         raise UserError(_("Erreur lors de la création du paiement: %s") % str(e))
+
+        # Gestion de la date + caisse mensuelle
         current_date = values.get("date")
         if current_date and values.get("expense_account_id"):
             try:
@@ -184,6 +191,15 @@ class HrExpenseAccountMove(models.Model):
         if res.date and res.expense_account_id:
             res.Settlement_of_monthly_accounts(res.date, res.expense_account_id.id)
 
+        # Abonnement au responsable de la caisse
+        # if (values.get('expense_move_type') == 'spent' and 
+        #     res.caisse_manager_id and 
+        #     res.caisse_manager_id.partner_id):
+        #     try:
+        #         res.message_subscribe(partner_ids=[res.caisse_manager_id.partner_id.id])
+        #     except Exception as e:
+        #         _logger.warning("Erreur lors de l'abonnement du responsable: %s", str(e))
+
         return res
 
     # @api.constrains("total_amount")
@@ -191,21 +207,25 @@ class HrExpenseAccountMove(models.Model):
     #     for rec in self:
     #         if rec.expense_account_id.balance < 0 and rec.expense_move_type == 'spent':
     #             raise ValidationError(_("vous n'avez pas suffisamment de solde pour effectuer cette transaction."))
-
+   
     @api.model
     def get_expense_dashboard(self, selected_caisse_ids=None, selected_month_id=None):
-        """Dashboard simple pour afficher les statistics de base avec filtre par mois"""
+        """
+        Dashboard pour afficher les statistics avec filtres par caisse et mois
+        
+        Args:
+            selected_caisse_ids: IDs des caisses à filtrer (None = toutes)
+            selected_month_id: ID du mois à filtrer (None = tous)
+        """
         user = self.env.user
         
-        # Récupérer les caisses de l'utilisateur avec filtrage
+        # ✅ Récupérer les caisses avec filtrage
         if selected_caisse_ids:
-            # Utiliser les caisses sélectionnées
             user_accounts = self.env['hr.expense.account'].browse(selected_caisse_ids)
         else:
-            # Logique existante
             user_accounts = self.env['hr.expense.account'].search([])
             
-            # Appliquer les mêmes règles que get_dashboard_stats
+            # Appliquer les permissions
             if not user.has_group('hr_expense_caisse.group_expense_caisse_administrator'):
                 if user.has_group('hr_expense_caisse.group_expense_caisse_caisse_manager'):
                     user_accounts = user_accounts.filtered(lambda x: x.user_id == user)
@@ -214,34 +234,35 @@ class HrExpenseAccountMove(models.Model):
                         lambda x: user in x.user_ids or x.user_id == user
                     )
         
-        # Construire le domaine de base pour les mouvements
+        # ✅ CORRECTION: Construire le domaine pour les mouvements
         move_domain = [('expense_account_id', 'in', user_accounts.ids)]
         
-        # Ajouter le filtre par mois si spécifié
+        # Filtre par mois (prioritaire)
         if selected_month_id:
             move_domain.append(('caisse_mois_id', '=', selected_month_id))
-            _logger.info(f"Filtre par mois appliqué: {selected_month_id}")
+            _logger.info(f"✅ DASHBOARD: Filtre mois appliqué: {selected_month_id}")
         
-        # Récupérer les mouvements filtrés
-        filtered_moves = self.env['hr.expense.account.move'].search(move_domain)
+        # ✅ Récupérer les mouvements filtrés
+        filtered_moves = self.search(move_domain)
         
-        # Calculer les totaux basés sur les mouvements filtrés
-        if selected_month_id:
-            # Si un mois est sélectionné, calculer à partir des mouvements de ce mois
-            spent_moves = filtered_moves.filtered(lambda x: x.expense_move_type == 'spent')
-            replenish_moves = filtered_moves.filtered(lambda x: x.expense_move_type == 'replenish')
-            
-            total_spent = sum(spent_moves.mapped('total_amount'))
-            total_replenished = sum(replenish_moves.mapped('total_amount'))
-            
-            # Pour le solde, utiliser le solde de la caisse mensuelle sélectionnée
+        # ✅ CORRECTION CRITIQUE: Calculer TOUJOURS depuis les mouvements filtrés
+        spent_moves = filtered_moves.filtered(lambda x: x.expense_move_type == 'spent')
+        replenish_moves = filtered_moves.filtered(lambda x: x.expense_move_type == 'replenish')
+        
+        total_spent = sum(spent_moves.mapped('total_amount'))
+        total_replenished = sum(replenish_moves.mapped('total_amount'))
+        
+        # Le solde dépend du contexte de filtre
+        if selected_month_id and len(user_accounts) == 1:
+            # Cas spécial: 1 caisse + 1 mois = utiliser le solde du mois
             month_record = self.env['hr.expense.account.month'].browse(selected_month_id)
             total_balance = month_record.sold if month_record else 0
+        elif selected_caisse_ids or selected_month_id:
+            # Avec filtres: Solde = Alimentations - Dépenses des mouvements filtrés
+            total_balance = total_replenished - total_spent
         else:
-            # Si aucun mois sélectionné, utiliser les totaux globaux des caisses
+            # Sans filtres: utiliser le solde global des caisses
             total_balance = sum(user_accounts.mapped('balance'))
-            total_spent = sum(user_accounts.mapped('total_spent'))
-            total_replenished = sum(user_accounts.mapped('total_replenished'))
         
         # Compter les mouvements récents (dernière semaine) avec les mêmes filtres
         recent_domain = move_domain + [('date', '>=', fields.Datetime.now() - timedelta(days=7))]

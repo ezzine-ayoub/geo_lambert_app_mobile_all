@@ -52,56 +52,64 @@
                         </span>
                       </div>
                       <div class="text-muted">
-                        Dépenses de Ce Tâche: <field name="total_expenses" widget="monetary"/>
-                      <br/>
-                        Dépenses de sous-tâches: <field name="total_expenses_chields" widget="monetary"/>
-                    <br/>
-                        Total Des Dépenses: <field name="total_expenses_parent" widget="monetary"/>
+                        <strong>Dépenses de Ce Service:
+                                                                              <!-- <div class="badge badge-pill badge-success o_expense_balance" style="font-size: 16px; padding: 10px 15px; background-color: #eb0e0eff; color: white; border-radius: 25px;"> -->
+                          <field name="total_expenses" widget="monetary" style="color: #eb0e0eff;font-size: 15px;" />
+                          <field name="currency_id" invisible="1" />
+
+                          <!-- </div> -->
+                          <br/>
+                        Dépenses de sous-tâches: <field name="total_expenses_chields" widget="monetary" style="color: #eb0e0eff;font-size: 15px;" />
+                        <br/>
+                        Total Des Dépenses: <field name="total_expenses_parent" widget="monetary" style="color: #eb0e0eff;font-size: 17px;" />
+                      </strong>
+
+                    </div>
                   </div>
                 </div>
-              </div>
-            </t>
-          </templates>
-        </kanban>
-      </field>
+              </t>
+            </templates>
+          </kanban>
+        </field>
+      </page>
+
+      <!-- Onglet Dépenses Projet -->
+      <page string="Dépenses" name="stages_tab">
+        <field name="expense_ids" context="{'default_expense_move_type': 'spent'}">
+          <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'">
+            <field name="name"/>
+            <field name="date"/>
+            <field name="employee_id"/>
+            <field name="project_id" optional="show"/>
+            <field name="task_id" optional="show"/>
+            <field name="expense_category_id" optional="show"/>
+            <field name="expense_type_id" optional="show"/>
+            <field name="expense_move_type" string="Type Debug" optional="hide" invisible="1" />
+            <!-- <field name="expense_category_id"/> -->
+            <!-- <field name="expense_category_id"/> -->
+            <field name="total_amount" sum="Total" />
+            <field name="description"/>
+          </list>
+        </field>
+      </page>
     </page>
 
-    <!-- Onglet Dépenses Projet -->
-    <page string="Dépenses" name="stages_tab">
-      <field name="expense_ids" context="{'default_expense_move_type': 'spent'}">
-        <list decoration-success="expense_move_type == 'replenish'" decoration-danger="expense_move_type == 'spent'" >
-          <field name="name"/>
-          <field name="date"/>
-          <field name="employee_id"/>
-          <field name="project_id" optional="show"/>
-          <field name="task_id" optional="show"/>
-          <field name="expense_category_id" optional="show"/>
-          <field name="expense_type_id" optional="show"/>
-          <field name="expense_move_type" string="Type Debug" optional="hide"  invisible="1" />
-          <!-- <field name="expense_category_id"/> -->
-          <!-- <field name="expense_category_id"/> -->
-          <field name="total_amount" sum="Total" />
-          <field name="description"/>
-        </list>
-      </field>
-    </page>
-  </page>
-
-</field>
+  </field>
 </record>
 
 
 <!-- Vue liste des projets avec type et numéro -->
 <record id="project_project_tree_view_expense" model="ir.ui.view">
-<field name="name">project.project.tree.expense</field>
-<field name="model">project.project</field>
-<field name="inherit_id" ref="project.view_project"/>
-<field name="arch" type="xml">
-  <field name="user_id" position="after">
-    <field name="total_project_expenses" optional="hide" sum="Total dépenses" widget="monetary"/>
-    <field name="task_expense_count" optional="hide"/>
+  <field name="name">project.project.tree.expense</field>
+  <field name="model">project.project</field>
+  <field name="inherit_id" ref="project.view_project"/>
+  <field name="arch" type="xml">
+    <field name="user_id" position="after">
+      <field name="currency_id" column_invisible="1" />
+      <field name="task_expense_count" string="Nombre Dépenses" optional="show"/>
+      <field name="total_project_expenses" string="Total Dépenses" optional="show" decoration-bf="1" sum="Total dépenses" widget="monetary"/>
+    </field>
   </field>
-</field>
 </record>
 
 </odoo>

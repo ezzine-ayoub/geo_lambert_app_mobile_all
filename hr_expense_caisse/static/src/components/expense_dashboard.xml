@@ -3,81 +3,79 @@
     <t t-name="hr_expense_caisse.ExpenseDashboard" owl="1">
         <div class="hr_expense_caisse_dashboard">
             <div class="expense_dashboard_modern">
-                <!-- Dashboard Content - CORRECTION: Affichage direct sans loader -->
-                <div class="dashboard_content">
-                    <!-- Détails mensuels (si mois sélectionné) -->
-                    <div t-if="state.selectedMonthDetails" class="mb-4">
-                        <div class="month_details_card">
-                            <div class="card_header">
-                                <h5 class="card_title">
-                                    <i class="fa fa-calendar-o"/>
-                                    <t t-esc="state.selectedMonthDetails.name || 'Mois sélectionné'"/>
-                                </h5>
-                            </div>
-                            <div class="card_content">
-                                <div class="month_stats">
-                                    <div class="stat_item start">
-                                        <div class="stat_icon">
-                                            <i class="fa fa-play"/>
-                                        </div>
-                                        <div class="stat_content">
-                                            <div class="stat_label">Solde initial</div>
-                                            <div class="stat_value">
-                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.solde_initial, 1)"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="stat_item current">
-                                        <div class="stat_icon">
-                                            <i class="fa fa-calculator"/>
-                                        </div>
-                                        <div class="stat_content">
-                                            <div class="stat_label">Solde actuel</div>
-                                            <div class="stat_value">
-                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.sold, 1)"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="stat_item end">
-                                        <div class="stat_icon">
-                                            <i class="fa fa-stop-circle-o"/>
-                                        </div>
-                                        <div class="stat_content">
-                                            <div class="stat_label">Solde final</div>
-                                            <div class="stat_value">
-                                                <t t-esc="renderMonetaryField(state.selectedMonthDetails.solde_final, 1)"/>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- ==================== Filtres ==================== -->
+                <!-- ==================== Filtres ==================== -->
+                <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 20px; background-color: #ffffff; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <!-- Filtre Caisse -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Caisse</label>
+                        <select class="form-select" t-on-change="onCaisseFilterChange" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: #1f2937; background-color: #ffffff;">
+                            <option value="">Toutes les caisses</option>
+                            <t t-foreach="state.allCaisses" t-as="caisse" t-key="caisse.id">
+                                <option t-att-value="caisse.id" t-att-selected="state.selectedCaisses.includes(caisse.id)">
+                                    <t t-esc="caisse.name"/> - <t t-esc="caisse.user_id ? caisse.user_id[1] : 'Aucun responsable'"/>
+                                </option>
+                            </t>
+                        </select>
                     </div>
 
-                    <!-- KPI Cards principales -->
+                    <!-- Filtre Mois -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Mois</label>
+                        <select class="form-select" t-on-change="onMonthFilterChange" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: #1f2937; background-color: #ffffff;">
+                            <option value="">Tous les mois</option>
+                            <t t-foreach="state.allMonths" t-as="month" t-key="month.id">
+                                <option t-att-value="month.id" t-att-selected="state.selectedMonth === month.id">
+                                    <t t-esc="month.display_name || month.name"/>
+                                </option>
+                            </t>
+                        </select>
+                    </div>
+
+                    <!-- Filtre Employé -->
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px;">Employé</label>
+                        <select class="form-select" t-on-change="onEmployeeFilterChange" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; color: #1f2937; background-color: #ffffff;">
+                            <option value="">Tous les employés</option>
+                            <t t-foreach="state.allEmployees" t-as="employee" t-key="employee.id">
+                                <option t-att-value="employee.id" t-att-selected="state.selectedEmployee === employee.id">
+                                    <t t-esc="employee.name"/>
+                                </option>
+                            </t>
+                        </select>
+                    </div>
+
+                   <!-- Bouton Effacer -->
+                    <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary" t-on-click="clearAllFilters" style="padding: 10px 20px; background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa fa-eraser"/> Effacer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="dashboard_content">
+                    <!-- ==================== KPI Cards ==================== -->
                     <div class="kpi_grid">
+                        <!-- Solde Actuel -->
                         <div class="kpi_card balance">
-                            <div class="kpi_icon">
-                                <i class="fa fa-money"/>
-                            </div>
+                            <div class="kpi_icon"><i class="fa fa-money"/></div>
                             <div class="kpi_content">
                                 <div class="kpi_label">Solde Actuel</div>
                                 <div class="kpi_value">
                                     <t t-esc="renderMonetaryField(state.totalBalance, 1)"/>
                                 </div>
                                 <div class="kpi_description">
-                                    <t t-if="hasActiveFilters()">Solde filtré</t>
-                                    <t t-elif="state.selectedCaisses.length === 0">Toutes caisses</t>
-                                    <t t-elif="state.selectedCaisses.length === 1">Caisse sélectionnée</t>
-                                    <t t-else="1"><t t-esc="state.selectedCaisses.length"/> caisses</t>
+                                    <t t-if="state.filteredCount > 0">
+                                        <t t-esc="state.filteredCount"/> mouvements filtrés
+                                    </t>
+                                    <t t-else="1">Toutes les caisses</t>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Total Dépensé -->
                         <div class="kpi_card expenses">
-                            <div class="kpi_icon">
-                                <i class="fa fa-arrow-down"/>
-                            </div>
+                            <div class="kpi_icon"><i class="fa fa-arrow-down"/></div>
                             <div class="kpi_content">
                                 <div class="kpi_label">Total Dépensé</div>
                                 <div class="kpi_value">
@@ -85,15 +83,14 @@
                                 </div>
                                 <div class="kpi_description">
                                     <t t-if="hasActiveFilters()">Montant filtré</t>
-                                    <t t-else="1">Montant des Dépenses</t>
+                                    <t t-else="1">Total des dépenses</t>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Total Alimentation -->
                         <div class="kpi_card replenishments">
-                            <div class="kpi_icon">
-                                <i class="fa fa-arrow-up"/>
-                            </div>
+                            <div class="kpi_icon"><i class="fa fa-arrow-up"/></div>
                             <div class="kpi_content">
                                 <div class="kpi_label">Total Alimentation</div>
                                 <div class="kpi_value">
@@ -101,31 +98,11 @@
                                 </div>
                                 <div class="kpi_description">
                                     <t t-if="hasActiveFilters()">Montant filtré</t>
-                                    <t t-else="1">Montant des Alimentations</t>
+                                    <t t-else="1">Total alimentations</t>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Indicateurs rapides -->
-                    <!-- <div class="quick_indicators">
-                        <div class="indicator_item">
-                            <div class="indicator_label">Caisses</div>
-                            <div class="indicator_value"><t t-esc="state.allCaisses.length"/></div>
-                        </div>
-                        <div class="indicator_item">
-                            <div class="indicator_label">Mois</div>
-                            <div class="indicator_value"><t t-esc="state.allMonths.length"/></div>
-                        </div>
-                        <div class="indicator_item">
-                            <div class="indicator_label">Mouvements</div>
-                            <div class="indicator_value"><t t-esc="state.expenseMovements.length"/></div>
-                        </div>
-                        <div t-if="state.filteredCount !== undefined" class="indicator_item">
-                            <div class="indicator_label">Filtrés</div>
-                            <div class="indicator_value"><t t-esc="state.filteredCount"/></div>
-                        </div>
-                    </div> -->
                 </div>
             </div>
         </div>

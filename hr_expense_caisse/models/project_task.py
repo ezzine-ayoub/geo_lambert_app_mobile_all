@@ -21,6 +21,7 @@ class ProjectTask(models.Model):
     
     total_expenses = fields.Float(
         'Total dépenses', 
+        currency_field='currency_id',
         compute='_compute_total_expenses', 
         store=True,
         help="Montant total des dépenses de cette tâche"
@@ -47,7 +48,11 @@ class ProjectTask(models.Model):
         compute='_compute_last_expense_date',
         help="Date de la dernière dépense enregistrée"
     )
-
+    currency_id = fields.Many2one(
+        'res.currency',
+        string="Devise",
+        default=lambda self: self.env.company.currency_id,
+    )
     
     @api.depends('expense_ids.total_amount')
     def _compute_total_expenses(self):

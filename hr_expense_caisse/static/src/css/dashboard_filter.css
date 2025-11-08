@@ -177,6 +177,7 @@
     display: flex;
     gap: 8px;
     align-items: end;
+    flex-wrap: wrap;
 }
 
 .hr_expense_caisse_dashboard .btn_clear {
@@ -197,6 +198,20 @@
 .hr_expense_caisse_dashboard .btn_clear:hover {
     background: var(--danger-color);
     color: var(--white);
+}
+
+.hr_expense_caisse_dashboard .btn_clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--medium-gray);
+    color: var(--dark-gray);
+    border-color: var(--medium-gray);
+}
+
+.hr_expense_caisse_dashboard .btn_refresh:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--medium-gray);
 }
 
 /* Filtres actifs - SCOPED */
@@ -225,10 +240,64 @@
     border: 1px solid var(--info-color);
 }
 
+.hr_expense_caisse_dashboard .filter_badge.employee {
+    background: rgba(113, 75, 103, 0.1);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
 .hr_expense_caisse_dashboard .filter_badge.month {
     background: rgba(40, 167, 69, 0.1);
     color: var(--success-color);
     border: 1px solid var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.project {
+    background: rgba(255, 193, 7, 0.1);
+    color: var(--warning-color);
+    border: 1px solid var(--warning-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.user {
+    background: rgba(113, 75, 103, 0.1);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.type {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.validation {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.attachments {
+    background: rgba(23, 162, 184, 0.1);
+    color: var(--info-color);
+    border: 1px solid var(--info-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.amount {
+    background: rgba(255, 193, 7, 0.1);
+    color: var(--warning-color);
+    border: 1px solid var(--warning-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.search {
+    background: rgba(113, 75, 103, 0.1);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.hr_expense_caisse_dashboard .filter_badge.date {
+    background: rgba(23, 162, 184, 0.1);
+    color: var(--info-color);
+    border: 1px solid var(--info-color);
 }
 
 /* Détails mensuels - SCOPED */

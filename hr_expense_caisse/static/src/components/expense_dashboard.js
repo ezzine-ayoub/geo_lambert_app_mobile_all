@@ -8,19 +8,19 @@ import { Component, onWillStart, useState } from "@odoo/owl";
 function formatMonetaryWithSpaces(value, currency_id = 1) {
     try {
         if (!value && value !== 0) value = 0;
-        
+
         // Utiliser l'API Odoo 18 pour le formatage monétaire
         try {
             return formatCurrency(value, currency_id);
         } catch (formatError) {
             // console.warn('Erreur formatCurrency:', formatError);
-            
+
             // Fallback avec formatage manuel
             const formattedValue = new Intl.NumberFormat('fr-FR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             }).format(value);
-            
+
             // Essayer d'accéder aux devises via session.currencies
             if (session.currencies && session.currencies[currency_id]) {
                 const currency = session.currencies[currency_id];
@@ -30,7 +30,7 @@ function formatMonetaryWithSpaces(value, currency_id = 1) {
                     return currency.symbol + " " + formattedValue;
                 }
             }
-            
+
             return formattedValue + " DH";
         }
     } catch (error) {
@@ -41,12 +41,15 @@ function formatMonetaryWithSpaces(value, currency_id = 1) {
 
 export class ExpenseDashboard extends Component {
     static template = 'hr_expense_caisse.ExpenseDashboard';
+    static props = {
+        domain: { type: Array, optional: true },
+    };
 
     setup() {
         super.setup();
         this.orm = useService('orm');
         this.notification = useService('notification');
-        
+
         // État initial avec valeurs par défaut sécurisées
         this.state = useState({
             loading: false, // CORRECTION: Commencer sans loading pour éviter le flash
@@ -55,6 +58,8 @@ export class ExpenseDashboard extends Component {
             allCaisses: [],
             selectedMonth: null,
             selectedDate: null,
+            selectedEmployee: null,
+            allEmployees: [],
             allMonths: [],
             selectedMonthDetails: null,
             totalBalance: 0,
@@ -64,18 +69,20 @@ export class ExpenseDashboard extends Component {
             filteredCount: undefined
         });
         
+        // Flag pour éviter les boucles infinies lors de l'auto-sélection
+        this.isAutoSelecting = false;
+
         onWillStart(async () => {
             // Charger les filtres depuis l'URL avant de charger les données
             await this.loadFiltersFromURL();
             await this.loadDashboardData();
-            
+
             // Configurer l'écoute des changements de filtres de recherche
             this.setupSearchFilterListener();
-            
+
             // Référence globale pour debug
             if (typeof window !== 'undefined') {
                 window.expenseDashboard = this;
-                // console.log('🌍 DEBUG: Dashboard disponible via window.expenseDashboard');
             }
         });
     }
@@ -86,18 +93,21 @@ export class ExpenseDashboard extends Component {
                 const url = new URL(window.location.href);
                 const caisseFilter = url.searchParams.get('caisse_filter');
                 const monthFilter = url.searchParams.get('month_filter');
+                const employeeFilter = url.searchParams.get('employee_filter');
                 const isDashboardFiltered = url.searchParams.get('dashboard_filtered');
-                
+
                 if (isDashboardFiltered) {
                     if (caisseFilter) {
                         const caisseIds = caisseFilter.split(',').map(id => parseInt(id));
                         this.state.selectedCaisses = caisseIds;
-                        // console.log('🔗 Filtres caisse restaurés depuis URL:', caisseIds);
                     }
-                    
+
                     if (monthFilter) {
                         this.state.selectedMonth = parseInt(monthFilter);
-                        // console.log('🔗 Filtre mois restauré depuis URL:', this.state.selectedMonth);
+                    }
+
+                    if (employeeFilter) {
+                        this.state.selectedEmployee = parseInt(employeeFilter);
                     }
                 }
             }
@@ -108,31 +118,31 @@ export class ExpenseDashboard extends Component {
 
     async loadDashboardData() {
         try {
-            // console.log('🔄 Chargement des données...');
-            // CORRECTION: Ne pas changer l'état de chargement pour éviter le flash
-            
+
             // 1. Charger les caisses avec gestion d'erreur
             await this.loadCaisses();
-            
-            // 2. Charger les mois avec gestion d'erreur
+
+            // 2. Charger les employés avec gestion d'erreur
+            await this.loadEmployees();
+
+            // 3. Charger les mois avec gestion d'erreur
             await this.loadMonths();
-            
-            // 3. Charger les mouvements avec gestion d'erreur
+
+            // 4. Charger les mouvements avec gestion d'erreur
             await this.loadExpenseMovements();
-            
-            // 4. Calculer les statistiques
+
+            // 5. Calculer les statistiques
             this.calculateStats();
-            
-            // console.log('✅ Données chargées avec succès');
+
             // CORRECTION: Les données restent visibles pendant le rechargement
-            
-            // 5. Émettre l'événement de filtre après le chargement
+
+            // 6. Émettre l'événement de filtre après le chargement
             // pour synchroniser la vue tree avec les filtres actuels
             setTimeout(() => this.emitFilterChangeEvent(), 100);
-            
+
         } catch (error) {
             // console.error('❌ Erreur chargement global:', error);
-            
+
             if (this.notification) {
                 this.notification.add('Erreur lors du chargement des données', { type: 'danger' });
             }
@@ -144,13 +154,27 @@ export class ExpenseDashboard extends Component {
             const all_caisses = await this.orm.call("hr.expense.account", 'search_read', [[]], {
                 fields: ['id', 'name', 'type', 'balance', 'user_id']
             });
-            
+
             this.state.allCaisses = Array.isArray(all_caisses) ? all_caisses : [];
-            // console.log('✅ Caisses chargées:', this.state.allCaisses.length);
-            
+
         } catch (error) {
             // console.error('❌ Erreur chargement caisses:', error);
             this.state.allCaisses = [];
+        }
+    }
+
+    async loadEmployees() {
+        try {
+            const all_employees = await this.orm.call("hr.employee", 'search_read', [[]], {
+                fields: ['id', 'name'],
+                order: 'name asc'
+            });
+
+            this.state.allEmployees = Array.isArray(all_employees) ? all_employees : [];
+
+        } catch (error) {
+            // console.error('❌ Erreur chargement employés:', error);
+            this.state.allEmployees = [];
         }
     }
 
@@ -160,15 +184,14 @@ export class ExpenseDashboard extends Component {
             if (this.state.selectedCaisses.length > 0) {
                 monthsDomain = [['caisse_id', 'in', this.state.selectedCaisses]];
             }
-            
+
             const all_months = await this.orm.call("hr.expense.account.month", 'search_read', [monthsDomain], {
                 fields: ['id', 'name', 'display_name', 'caisse_id', 'sold', 'solde_initial', 'solde_final'],
                 order: 'name desc'
             });
-            
+
             this.state.allMonths = Array.isArray(all_months) ? all_months : [];
-            // console.log('✅ Mois chargés:', this.state.allMonths.length);
-            
+
             // Gérer les détails du mois sélectionné
             if (this.state.selectedMonth) {
                 const monthDetails = this.state.allMonths.find(m => m.id === this.state.selectedMonth);
@@ -179,7 +202,7 @@ export class ExpenseDashboard extends Component {
                     this.state.selectedMonthDetails = null;
                 }
             }
-            
+
         } catch (error) {
             // console.error('❌ Erreur chargement mois:', error);
             this.state.allMonths = [];
@@ -189,12 +212,16 @@ export class ExpenseDashboard extends Component {
     async loadExpenseMovements() {
         try {
             let domain = [];
-            
+
+
             // فلاتر الكايس
             if (this.state.selectedCaisses.length > 0) {
                 domain.push(['expense_account_id', 'in', this.state.selectedCaisses]);
+            } else if (this.externalFilters && this.externalFilters.caisseIds && this.externalFilters.caisseIds.length > 0) {
+                // Use external filter caisseIds if no internal selection
+                domain.push(['expense_account_id', 'in', this.externalFilters.caisseIds]);
             }
-            
+
             // فلاتر الشهر
             if (this.state.selectedMonth) {
                 domain.push(['caisse_mois_id', '=', this.state.selectedMonth]);
@@ -204,43 +231,53 @@ export class ExpenseDashboard extends Component {
                 domain.push(['date', '>=', selectedDate + ' 00:00:00']);
                 domain.push(['date', '<=', selectedDate + ' 23:59:59']);
             }
-            
-            // فلاتر خارجية من البحث - محدثة لدعم جميع الفلاتر
+
+            // فلتر الموظف
+            if (this.state.selectedEmployee) {
+                domain.push(['employee_id', '=', this.state.selectedEmployee]);
+            }
+
+
             if (this.externalFilters) {
-                // فلاتر المشاريع
+
                 if (this.externalFilters.projectIds && this.externalFilters.projectIds.length > 0) {
                     domain.push(['project_id', 'in', this.externalFilters.projectIds]);
                 }
-                
-                // فلاتر المستخدمين
+
+
                 if (this.externalFilters.userIds && this.externalFilters.userIds.length > 0) {
                     domain.push(['user_id', 'in', this.externalFilters.userIds]);
                 }
-                
-                // فلاتر نوع النفقة
+
+
+                if (this.externalFilters.projectManagerIds && this.externalFilters.projectManagerIds.length > 0) {
+                    domain.push(['project_manager_id', 'in', this.externalFilters.projectManagerIds]);
+                }
+
+
                 if (this.externalFilters.expenseType) {
                     domain.push(['expense_move_type', '=', this.externalFilters.expenseType]);
                 }
-                
-                // فلاتر حالة التحقق - جديد
+
+
                 if (this.externalFilters.validationStatus !== null && this.externalFilters.validationStatus !== undefined) {
                     domain.push(['validate_by_administrator', '=', this.externalFilters.validationStatus]);
                 }
-                
-                // فلاتر المرفقات - جديد
+
+
                 if (this.externalFilters.hasAttachments === true) {
                     domain.push(['attachment_ids', '!=', false]);
                 } else if (this.externalFilters.hasAttachments === false) {
                     domain.push(['attachment_ids', '=', false]);
                 }
-                
-                // فلاتر المبلغ - جديد
+
+
                 if (this.externalFilters.amountCondition) {
                     const { operator, value } = this.externalFilters.amountCondition;
                     domain.push(['total_amount', operator, value]);
                 }
-                
-                // فلاتر التاريخ
+
+
                 if (this.externalFilters.dateRange) {
                     if (this.externalFilters.dateRange.start) {
                         domain.push(['date', '>=', this.externalFilters.dateRange.start]);
@@ -249,58 +286,44 @@ export class ExpenseDashboard extends Component {
                         domain.push(['date', '<=', this.externalFilters.dateRange.end]);
                     }
                 }
-                
-                // البحث العام - محسن للبحث في عدة حقول (محسن)
+
                 if (this.externalFilters.generalSearch && this.externalFilters.generalSearch.trim().length > 0) {
                     const searchText = this.externalFilters.generalSearch.trim();
-                    // console.log('🔍 DASHBOARD: Application recherche générale:', searchText);
-                    
-                    // بناء مجموعة شروط OR للبحث في عدة حقول
+
+
                     const searchConditions = [
                         ['name', 'ilike', searchText],
                         ['description', 'ilike', searchText],
                         ['designation', 'ilike', searchText]
                     ];
-                    
-                    // اضافة بحت في العلاقات (many2one fields)
-                    // البحث في أسماء المشاريع
-                    if (searchText.toLowerCase().includes('project') || /^project\s*\d+$/i.test(searchText)) {
-                        // إذا كان البحث يشبه "Project 2" أو "مشروع"
-                        searchConditions.push(['project_id', 'ilike', searchText]);
+
+
+                    if (searchText.toLowerCase().includes('caisse') ||
+                        searchText.toLowerCase().includes('cash') ||
+                        searchText.toLowerCase().includes('demo') ||
+                        searchText.toLowerCase().includes('project') ||
+                        searchText.toLowerCase().includes('administrator') ||
+                        searchText.includes(' - ')) {
+                        if (searchText.includes(' - ')) {
+                            const parts = searchText.split(' - ');
+                            const mainName = parts[0].trim();
+                            const managerName = parts[1].trim();
+
+                            searchConditions.push(['expense_account_id', 'ilike', mainName]);
+
+                        } else {
+                            searchConditions.push(['expense_account_id', 'ilike', searchText]);
+                        }
                     }
-                    
-                // البحث في أسماء الكايس - محسن للتعامل مع "Nom - Manager"
-                if (searchText.toLowerCase().includes('caisse') || 
-                    searchText.toLowerCase().includes('cash') || 
-                    searchText.toLowerCase().includes('demo') ||
-                    searchText.toLowerCase().includes('project') ||
-                    searchText.toLowerCase().includes('administrator') ||
-                    searchText.includes(' - ')) {
-                    // بحث ذكي: إذا كان النص يحتوي على " - " فهو على الأرجح "اسم - مدير"
-                    if (searchText.includes(' - ')) {
-                        const parts = searchText.split(' - ');
-                        const mainName = parts[0].trim();
-                        const managerName = parts[1].trim();
-                        
-                        // بحث في الأجزاء المنفصلة
-                        searchConditions.push(['expense_account_id', 'ilike', mainName]);
-                        searchConditions.push(['project_manager_id', 'ilike', managerName]);
-                        searchConditions.push(['project_id', 'ilike', mainName]);
-                        
-                        console.log('🔍 DASHBOARD: Recherche divisée:', { mainName, managerName });
-                    } else {
-                        // بحث عادي
-                        searchConditions.push(['expense_account_id', 'ilike', searchText]);
-                        searchConditions.push(['project_manager_id', 'ilike', searchText]);
-                        searchConditions.push(['project_id', 'ilike', searchText]);
+
+                    if (searchText.toLowerCase().includes('admin') ||
+                        searchText.toLowerCase().includes('user') ||
+                        !searchText.toLowerCase().includes('caisse')) {
                     }
-                }
-                    
-                    // تطبيق شروط OR
+
                     if (searchConditions.length === 1) {
                         domain.push(searchConditions[0]);
                     } else if (searchConditions.length > 1) {
-                        // بناء دومين OR معقد
                         for (let i = 0; i < searchConditions.length - 1; i++) {
                             domain.push('|');
                         }
@@ -308,33 +331,19 @@ export class ExpenseDashboard extends Component {
                             domain.push(condition);
                         });
                     }
-                    
-                    // console.log('🔍 DASHBOARD: Domaine de recherche appliqué:', domain.slice(-searchConditions.length * 2 + 1));
+
                 }
             }
-            
-            // console.log('🔍 MOVEMENTS: Domaine pour mouvements (avec filtres externes):', {
-            //     domain: domain,
-            //     hasActiveFilters: this.hasActiveFilters(),
-            //     externalFilters: this.externalFilters
-            // });
-            
+
             const movements = await this.orm.call("hr.expense.account.move", 'search_read', [domain], {
-                fields: ['id', 'name', 'total_amount', 'expense_move_type', 'expense_account_id', 'caisse_mois_id', 'project_id', 'user_id', 'date'],
-                limit: 1000
             });
-            
+
             this.state.expenseMovements = Array.isArray(movements) ? movements : [];
-            // console.log('✅ MOVEMENTS: Mouvements chargés avec filtres externes:', {
-            //     count: this.state.expenseMovements.length,
-            //     hasFilters: this.hasActiveFilters()
-            // });
-            
-            // تخزين عدد الحركات للمراجعة
+
+
             this.state.filteredCount = this.state.expenseMovements.length;
-            
+
         } catch (error) {
-            // console.error('❌ MOVEMENTS: Erreur chargement mouvements:', error);
             this.state.expenseMovements = [];
             this.state.filteredCount = 0;
         }
@@ -345,57 +354,50 @@ export class ExpenseDashboard extends Component {
             let totalBalance = 0;
             let totalExpenses = 0;
             let totalReplenishments = 0;
-            
-            // حساب الإحصائيات بناءً على الحركات المُفلترة بدلاً من الكايس مباشرة
-            // console.log('📊 STATS: حساب الإحصائيات من الحركات المُفلترة:', this.state.expenseMovements.length);
-            
-            // حساب من الحركات المُفلترة
-            this.state.expenseMovements.forEach(movement => {
-                if (movement && typeof movement.total_amount === 'number') {
-                    if (movement.expense_move_type === 'spent') {
-                        totalExpenses += movement.total_amount;
-                    } else if (movement.expense_move_type === 'replenish') {
-                        totalReplenishments += movement.total_amount;
-                    }
+
+
+            if (!this.state.expenseMovements || this.state.expenseMovements.length === 0) {
+                console.warn('⚠️ STATS: Aucun mouvement à traiter - stats à zéro');
+                this.state.totalBalance = 0;
+                this.state.totalExpenses = 0;
+                this.state.totalReplenishments = 0;
+                return;
+            }
+
+
+            this.state.expenseMovements.forEach((movement, index) => {
+                if (!movement || typeof movement.total_amount !== 'number') {
+                    console.warn(`⚠️ STATS: Mouvement ${index + 1} invalide, ignoré:`, movement);
+                    return;
+                }
+
+                const movementInfo = {
+                    '#': `${index + 1}/${this.state.expenseMovements.length}`,
+                    'Ref': movement.name,
+                    'Montant': movement.total_amount.toFixed(2) + ' DH',
+                    'Type': movement.expense_move_type === 'spent' ? '💸 DÉPENSE' : '💰 ALIMENTATION',
+                    'Utilisateur': movement.user_id ? movement.user_id[1] : 'N/A',
+                };
+
+
+                if (movement.expense_move_type === 'spent') {
+                    totalExpenses += movement.total_amount;
+                } else if (movement.expense_move_type === 'replenish') {
+                    totalReplenishments += movement.total_amount;
+                } else {
+                    console.warn(`⚠️ STATS: Type inconnu pour mouvement ${movement.id}:`, movement.expense_move_type);
                 }
             });
-            
-            // حساب الرصيد = الإمدادات - المصروفات (من البيانات المُفلترة)
+
             totalBalance = totalReplenishments - totalExpenses;
-            
-            // إذا لم تكن هناك فلاتر خارجية، احسب من الكايس مباشرة للرصيد فقط
-            if (!this.hasActiveFilters()) {
-                // console.log('📊 STATS: لا توجد فلاتر نشطة - حساب الرصيد من الكايس');
-                totalBalance = 0;
-                
-                // حساب من الكايس المحددة أو جميع الكايس
-                const caisses = this.state.selectedCaisses.length > 0 
-                    ? this.state.allCaisses.filter(c => this.state.selectedCaisses.includes(c.id))
-                    : this.state.allCaisses;
-                    
-                caisses.forEach(caisse => {
-                    if (caisse && typeof caisse.balance === 'number') {
-                        totalBalance += caisse.balance;
-                    }
-                });
-            } else {
-                // console.log('📊 STATS: فلاتر نشطة - حساب الرصيد من الحركات المُفلترة');
-            }
-            
+
             this.state.totalBalance = totalBalance;
             this.state.totalExpenses = totalExpenses;
             this.state.totalReplenishments = totalReplenishments;
-            
-            // console.log('📊 STATS: إحصائيات محسوبة (مع الفلاتر):', {
-            //     balance: totalBalance,
-            //     expenses: totalExpenses,
-            //     replenishments: totalReplenishments,
-            //     hasFilters: this.hasActiveFilters()
-            // });
-            
+
+
         } catch (error) {
-            // console.error('❌ STATS: خطأ في حساب الإحصائيات:', error);
-            // قيم افتراضية في حالة الخطأ
+            console.error('❌ STATS: Erreur calcul statistiques:', error);
             this.state.totalBalance = 0;
             this.state.totalExpenses = 0;
             this.state.totalReplenishments = 0;
@@ -405,110 +407,276 @@ export class ExpenseDashboard extends Component {
     async onCaisseFilterChange(event) {
         try {
             const selectedValue = event.target.value;
-            // console.log('🔄 Changement filtre caisse:', selectedValue);
-            
+
             if (selectedValue) {
                 this.state.selectedCaisses = [parseInt(selectedValue)];
+                
+                // Auto-sélectionner l'employé responsable de la caisse (seulement si pas déjà en auto-sélection)
+                if (!this.isAutoSelecting) {
+                    this.isAutoSelecting = true;
+                    
+                    const selectedCaisse = this.state.allCaisses.find(c => c.id === parseInt(selectedValue));
+                    if (selectedCaisse && selectedCaisse.user_id) {
+                        // Récupérer le user_id de la caisse
+                        const userId = selectedCaisse.user_id[0];
+                        
+                        // Trouver l'employé correspondant à ce user_id
+                        try {
+                            const employees = await this.orm.call("hr.employee", 'search_read', 
+                                [[['user_id', '=', userId]]], 
+                                { fields: ['id'], limit: 1 }
+                            );
+                            
+                            if (employees && employees.length > 0) {
+                                this.state.selectedEmployee = employees[0].id;
+                                console.log('✅ CAISSE→EMPLOYÉ: Employé auto-sélectionné:', employees[0].id);
+                            } else {
+                                // Si pas d'employé trouvé, réinitialiser
+                                this.state.selectedEmployee = null;
+                                console.log('⚠️ Aucun employé trouvé pour le user_id:', userId);
+                            }
+                        } catch (employeeError) {
+                            console.warn('⚠️ Erreur récupération employé:', employeeError);
+                            this.state.selectedEmployee = null;
+                        }
+                    } else {
+                        // Pas de responsable assigné à la caisse
+                        this.state.selectedEmployee = null;
+                    }
+                    
+                    // Libérer le flag après un délai
+                    setTimeout(() => {
+                        this.isAutoSelecting = false;
+                    }, 500);
+                }
             } else {
                 this.state.selectedCaisses = [];
+                this.state.selectedEmployee = null;
             }
-            
-            // Réinitialiser les filtres de mois et date quand on change de caisse
+
             this.state.selectedMonth = null;
             this.state.selectedDate = null;
             this.state.selectedMonthDetails = null;
-            
+
+            // Recharger les données du dashboard
             await this.loadDashboardData();
-            this.emitFilterChangeEvent();
             
+            // Émettre l'événement pour synchroniser la liste
+            this.emitFilterChangeEvent();
+
         } catch (error) {
-            // console.error('❌ Erreur changement filtre caisse:', error);
+            console.error('❌ Erreur changement filtre caisse:', error);
+            this.isAutoSelecting = false;
+        }
+    }
+
+    async onEmployeeFilterChange(event) {
+        try {
+            const selectedValue = event.target.value;
+
+            if (selectedValue) {
+                this.state.selectedEmployee = parseInt(selectedValue);
+                
+                // Auto-sélectionner la caisse de l'employé (seulement si pas déjà en auto-sélection)
+                if (!this.isAutoSelecting) {
+                    this.isAutoSelecting = true;
+                    
+                    const selectedEmployee = this.state.allEmployees.find(e => e.id === parseInt(selectedValue));
+                    if (selectedEmployee) {
+                        try {
+                            // Récupérer l'employé complet avec son user_id
+                            const employeeFull = await this.orm.call("hr.employee", 'read', 
+                                [parseInt(selectedValue)], 
+                                { fields: ['user_id'] }
+                            );
+                            
+                            if (employeeFull && employeeFull.length > 0 && employeeFull[0].user_id) {
+                                const userId = employeeFull[0].user_id[0];
+                                
+                                // Trouver la caisse dont le responsable est cet utilisateur
+                                const caisseWithUser = this.state.allCaisses.find(c => 
+                                    c.user_id && c.user_id[0] === userId
+                                );
+                                
+                                if (caisseWithUser) {
+                                    this.state.selectedCaisses = [caisseWithUser.id];
+                                    console.log('✅ EMPLOYÉ→CAISSE: Caisse auto-sélectionnée:', caisseWithUser.name, '(ID:', caisseWithUser.id, ')');
+                                    
+                                    // Recharger les mois pour cette caisse
+                                    await this.loadMonths();
+                                } else {
+                                    // L'employé n'est responsable d'aucune caisse
+                                    this.state.selectedCaisses = [];
+                                    console.log('⚠️ Aucune caisse trouvée pour l\'employé:', selectedEmployee.name);
+                                }
+                            } else {
+                                // L'employé n'a pas de user_id
+                                this.state.selectedCaisses = [];
+                                console.log('⚠️ L\'employé n\'a pas de user_id associé');
+                            }
+                        } catch (employeeError) {
+                            console.warn('⚠️ Erreur récupération données employé:', employeeError);
+                            this.state.selectedCaisses = [];
+                        }
+                    } else {
+                        this.state.selectedCaisses = [];
+                    }
+                    
+                    // Libérer le flag après un délai
+                    setTimeout(() => {
+                        this.isAutoSelecting = false;
+                    }, 500);
+                }
+            } else {
+                this.state.selectedEmployee = null;
+                this.state.selectedCaisses = [];
+            }
+
+            // Recharger les données du dashboard
+            await this.loadDashboardData();
+            
+            // Émettre l'événement pour synchroniser la liste
+            this.emitFilterChangeEvent();
+
+        } catch (error) {
+            console.error('❌ Erreur changement filtre employé:', error);
+            this.isAutoSelecting = false;
         }
     }
 
     async onDateFilterChange(event) {
         try {
             const selectedValue = event.target.value;
-            // console.log('🔄 Changement filtre date:', selectedValue);
-            
+
             this.state.selectedDate = selectedValue || null;
-            
-            // Si on sélectionne une date, désactiver le filtre de mois
+
             if (selectedValue) {
                 this.state.selectedMonth = null;
                 this.state.selectedMonthDetails = null;
             }
-            
+
+            // Recharger les données du dashboard
             await this.loadDashboardData();
-            this.emitFilterChangeEvent();
             
+            // Émettre l'événement pour synchroniser la liste
+            this.emitFilterChangeEvent();
+
         } catch (error) {
-            // console.error('❌ Erreur changement filtre date:', error);
+            console.error('❌ Erreur changement filtre date:', error);
         }
     }
 
     async onMonthFilterChange(event) {
         try {
             const selectedValue = event.target.value;
-            // console.log('🔄 Changement filtre mois:', selectedValue);
-            
+
             if (selectedValue) {
                 this.state.selectedMonth = parseInt(selectedValue);
-                const monthDetails = this.state.allMonths.find(m => m.id === this.state.selectedMonth);
+                const monthDetails = this.state.allMonths.find(m => m.id === parseInt(selectedValue));
                 this.state.selectedMonthDetails = monthDetails || null;
-                
-                // Si on sélectionne un mois, désactiver le filtre de date
+
                 this.state.selectedDate = null;
+                
+                // Auto-sélectionner la caisse et l'employé du mois (seulement si pas déjà en auto-sélection)
+                if (!this.isAutoSelecting && monthDetails) {
+                    this.isAutoSelecting = true;
+                    
+                    // Récupérer la caisse du mois
+                    if (monthDetails.caisse_id) {
+                        const caisseId = Array.isArray(monthDetails.caisse_id) ? monthDetails.caisse_id[0] : monthDetails.caisse_id;
+                        this.state.selectedCaisses = [caisseId];
+                        console.log('✅ MOIS→CAISSE: Caisse auto-sélectionnée:', caisseId);
+                        
+                        // Auto-sélectionner l'employé responsable de cette caisse
+                        const selectedCaisse = this.state.allCaisses.find(c => c.id === caisseId);
+                        if (selectedCaisse && selectedCaisse.user_id) {
+                            const userId = selectedCaisse.user_id[0];
+                            
+                            try {
+                                const employees = await this.orm.call("hr.employee", 'search_read', 
+                                    [[['user_id', '=', userId]]], 
+                                    { fields: ['id'], limit: 1 }
+                                );
+                                
+                                if (employees && employees.length > 0) {
+                                    this.state.selectedEmployee = employees[0].id;
+                                    console.log('✅ MOIS→EMPLOYÉ: Employé auto-sélectionné:', employees[0].id);
+                                } else {
+                                    this.state.selectedEmployee = null;
+                                }
+                            } catch (employeeError) {
+                                console.warn('⚠️ Erreur récupération employé:', employeeError);
+                                this.state.selectedEmployee = null;
+                            }
+                        } else {
+                            this.state.selectedEmployee = null;
+                        }
+                    } else {
+                        // Pas de caisse associée au mois
+                        this.state.selectedCaisses = [];
+                        this.state.selectedEmployee = null;
+                        console.log('⚠️ Mois sans caisse associée');
+                    }
+                    
+                    // Libérer le flag après un délai
+                    setTimeout(() => {
+                        this.isAutoSelecting = false;
+                    }, 500);
+                }
             } else {
                 this.state.selectedMonth = null;
                 this.state.selectedMonthDetails = null;
             }
-            
+
+            // Recharger les données du dashboard
             await this.loadDashboardData();
-            this.emitFilterChangeEvent();
             
+            // Émettre l'événement pour synchroniser la liste
+            this.emitFilterChangeEvent();
+
         } catch (error) {
-            // console.error('❌ Erreur changement filtre mois:', error);
+            console.error('❌ Erreur changement filtre mois:', error);
+            this.isAutoSelecting = false;
         }
     }
 
     async clearCaisseFilter() {
         try {
-            // console.log('🗑️ Effacement filtre caisse');
+
             this.state.selectedCaisses = [];
             this.state.selectedMonth = null;
             this.state.selectedDate = null;
             this.state.selectedMonthDetails = null;
             await this.loadDashboardData();
-            // TEMPORAIREMENT DÉSACTIVÉ POUR ÉVITER LES BOUCLES D'ERREURS
-            // this.emitFilterChangeEvent();
         } catch (error) {
-            // console.error('❌ Erreur effacement filtre caisse:', error);
+        }
+    }
+
+    async clearEmployeeFilter() {
+        try {
+            this.state.selectedEmployee = null;
+            await this.loadDashboardData();
+        } catch (error) {
         }
     }
 
     async clearDateFilter() {
         try {
-            // console.log('🗑️ Effacement filtre date');
+
             this.state.selectedDate = null;
             await this.loadDashboardData();
-            // TEMPORAIREMENT DÉSACTIVÉ POUR ÉVITER LES BOUCLES D'ERREURS
-            // this.emitFilterChangeEvent();
+
         } catch (error) {
-            // console.error('❌ Erreur effacement filtre date:', error);
         }
     }
 
     async clearMonthFilter() {
         try {
-            // console.log('🗑️ Effacement filtre mois');
+
             this.state.selectedMonth = null;
             this.state.selectedMonthDetails = null;
             await this.loadDashboardData();
-            // TEMPORAIREMENT DÉSACTIVÉ POUR ÉVITER LES BOUCLES D'ERREURS
-            // this.emitFilterChangeEvent();
         } catch (error) {
-            // console.error('❌ Erreur effacement filtre mois:', error);
         }
     }
 
@@ -543,6 +711,18 @@ export class ExpenseDashboard extends Component {
         }
     }
 
+    getEmployeeFilterText() {
+        try {
+            if (!this.state.selectedEmployee) {
+                return 'Tous les employés';
+            }
+            const employee = this.state.allEmployees.find(e => e.id === this.state.selectedEmployee);
+            return employee ? employee.name : 'Employé sélectionné';
+        } catch (error) {
+            return 'Employés';
+        }
+    }
+
     renderMonetaryField(value, currency_id) {
         const safeValue = (typeof value === 'number') ? value : 0;
         return formatMonetaryWithSpaces(safeValue, currency_id || 1);
@@ -552,13 +732,37 @@ export class ExpenseDashboard extends Component {
         if (!this.externalFilters) return 0;
         return Object.keys(this.externalFilters).length;
     }
-    
+
     hasActiveFilters() {
-        // التحقق من وجود أي فلاتر نشطة (خارجية أو داخلية)
-        const hasExternalFilters = this.externalFilters && Object.keys(this.externalFilters).length > 0;
-        const hasInternalFilters = this.state.selectedMonth || this.state.selectedDate;
-        
-        return hasExternalFilters || hasInternalFilters;
+        // Vérifier s'il y a des filtres externes RÉELLEMENT actifs (pas juste des clés vides)
+        let hasExternalFilters = false;
+        if (this.externalFilters) {
+            // Vérifier chaque filtre externe pour voir s'il a une valeur réelle
+            const activeExternalFilters = Object.entries(this.externalFilters).filter(([key, value]) => {
+                // Ignorer les valeurs null, undefined, ou fausses
+                if (value === null || value === undefined || value === false) return false;
+
+                // Pour les tableaux, vérifier qu'ils ne sont pas vides
+                if (Array.isArray(value)) return value.length > 0;
+
+                // Pour les objets, vérifier qu'ils ont des propriétés
+                if (typeof value === 'object') return Object.keys(value).length > 0;
+
+                // Pour les chaînes, vérifier qu'elles ne sont pas vides
+                if (typeof value === 'string') return value.trim().length > 0;
+
+                // Pour les autres types (nombres, booléens true), considérer comme actif
+                return true;
+            });
+
+            hasExternalFilters = activeExternalFilters.length > 0;
+        }
+
+        const hasInternalFilters = this.state.selectedMonth || this.state.selectedDate || this.state.selectedCaisses.length > 0 || this.state.selectedEmployee;
+
+        const isActive = hasExternalFilters || hasInternalFilters;
+
+        return isActive;
     }
 
     getExternalFiltersText() {
@@ -576,23 +780,29 @@ export class ExpenseDashboard extends Component {
         if (!this.externalFilters) return result;
 
         if (this.externalFilters.projectIds && this.externalFilters.projectIds.length > 0) {
-            result.project = this.externalFilters.projectIds.length === 1 ? 
-                'Projet sélectionné' : 
+            result.project = this.externalFilters.projectIds.length === 1 ?
+                'Projet sélectionné' :
                 `${this.externalFilters.projectIds.length} projets`;
         }
 
         if (this.externalFilters.userIds && this.externalFilters.userIds.length > 0) {
-            result.user = this.externalFilters.userIds.length === 1 ? 
-                'Utilisateur sélectionné' : 
+            result.user = this.externalFilters.userIds.length === 1 ?
+                'Utilisateur sélectionné' :
                 `${this.externalFilters.userIds.length} utilisateurs`;
         }
 
+        if (this.externalFilters.projectManagerIds && this.externalFilters.projectManagerIds.length > 0) {
+            result.user = this.externalFilters.projectManagerIds.length === 1 ?
+                'Utilisateur sélectionné' :
+                `${this.externalFilters.projectManagerIds.length} caissier`;
+        }
+
         if (this.externalFilters.expenseType) {
-            result.type = this.externalFilters.expenseType === 'spent' ? 
-                'Dépenses' : this.externalFilters.expenseType === 'replenish' ? 
+            result.type = this.externalFilters.expenseType === 'spent' ?
+                'Dépenses' : this.externalFilters.expenseType === 'replenish' ?
                 'Alimentations' : 'Type filtré';
         }
-        
+
         // NOUVEAUX filtres
         if (this.externalFilters.validationStatus !== null && this.externalFilters.validationStatus !== undefined) {
             const statusMap = {
@@ -603,18 +813,18 @@ export class ExpenseDashboard extends Component {
             };
             result.validation = statusMap[this.externalFilters.validationStatus] || 'Statut filtré';
         }
-        
+
         if (this.externalFilters.hasAttachments === true) {
             result.attachments = 'Avec pièces jointes';
         } else if (this.externalFilters.hasAttachments === false) {
             result.attachments = 'Sans pièces jointes';
         }
-        
+
         if (this.externalFilters.amountCondition) {
             const { operator, value } = this.externalFilters.amountCondition;
             result.amount = `Montant ${operator} ${value}`;
         }
-        
+
         if (this.externalFilters.generalSearch) {
             result.search = `Recherche: "${this.externalFilters.generalSearch}"`;
         }
@@ -634,7 +844,7 @@ export class ExpenseDashboard extends Component {
 
     async refreshData() {
         try {
-            // console.log('🔄 Actualisation...');
+
             await this.loadDashboardData();
         } catch (error) {
             // console.error('❌ Erreur actualisation:', error);
@@ -645,333 +855,284 @@ export class ExpenseDashboard extends Component {
         try {
             // Ne pas émettre d'événement si on est en train d'appliquer des filtres externes
             if (this.isApplyingExternalFilters) {
-                // console.log('⏭️ SYNCHRONISATION: Émission événement bloquée (filtres externes)');
                 return;
             }
-            
-            // console.log('📡 SYNCHRONISATION: Émission événement filtre avec protection:', {
-            //     caisseIds: this.state.selectedCaisses,
-            //     monthId: this.state.selectedMonth,
-            //     selectedDate: this.state.selectedDate,
-            //     mouvements: this.state.expenseMovements.length
-            // });
-            
+
+            console.log('📡 DASHBOARD: Émission événement filtre changé');
+
             // Construire le domaine exact à appliquer
             const domain = [];
-            
+
             if (this.state.selectedCaisses.length > 0) {
                 domain.push(['expense_account_id', 'in', this.state.selectedCaisses]);
             }
-            
+
             if (this.state.selectedMonth) {
                 domain.push(['caisse_mois_id', '=', this.state.selectedMonth]);
             } else if (this.state.selectedDate) {
                 domain.push(['date', '>=', this.state.selectedDate + ' 00:00:00']);
                 domain.push(['date', '<=', this.state.selectedDate + ' 23:59:59']);
             }
-            
-            // console.log('🔍 SYNCHRONISATION: Domaine à appliquer:', domain);
-            
+
+            if (this.state.selectedEmployee) {
+                domain.push(['employee_id', '=', this.state.selectedEmployee]);
+            }
+
             // Émettre l'événement avec le domaine pour la vue tree
             const filterData = {
                 caisseIds: this.state.selectedCaisses,
                 monthId: this.state.selectedMonth,
                 selectedDate: this.state.selectedDate,
+                employeeId: this.state.selectedEmployee,
                 domain: domain,
                 expectedCount: this.state.expenseMovements.length,
-                timestamp: Date.now() // Pour éviter les doublons
+                timestamp: Date.now(), // Pour éviter les doublons
+                applyToSearchBar: true // Nouvelle option pour appliquer à la barre de recherche
             };
-            
+
+            console.log('📡 DASHBOARD: Données filtre:', filterData);
+
             // Événement via bus Odoo
             if (this.env.bus) {
                 this.env.bus.trigger('dashboard-filter-changed', filterData);
-                // console.log('🚌 SYNCHRONISATION: Événement émis via env.bus');
             }
-            
+
             // Événement via window
             if (typeof window !== 'undefined') {
                 const event = new CustomEvent('dashboard-filter-changed', {
                     detail: filterData
                 });
                 window.dispatchEvent(event);
-                // console.log('🌍 SYNCHRONISATION: Événement émis via window');
             }
-            
+
             // Mettre à jour l'URL pour la persistance (sans rechargement)
             this.updateURLOnly();
-            
+
         } catch (error) {
-            // console.error('❌ SYNCHRONISATION: Erreur émission événement:', error);
+            console.error('❌ SYNCHRONISATION: Erreur émission événement:', error);
         }
     }
-    
+
     updateURLOnly() {
         try {
             if (typeof window !== 'undefined' && window.location) {
                 const url = new URL(window.location.href);
-                
+
                 // Supprimer les anciens paramètres
                 url.searchParams.delete('caisse_filter');
                 url.searchParams.delete('month_filter');
+                url.searchParams.delete('employee_filter');
                 url.searchParams.delete('dashboard_filtered');
-                
+
                 // Ajouter les nouveaux si nécessaire
                 if (this.state.selectedCaisses.length > 0) {
                     url.searchParams.set('caisse_filter', this.state.selectedCaisses.join(','));
                 }
-                
+
                 if (this.state.selectedMonth) {
                     url.searchParams.set('month_filter', this.state.selectedMonth.toString());
                 }
-                
-                if (this.state.selectedCaisses.length > 0 || this.state.selectedMonth) {
+
+                if (this.state.selectedEmployee) {
+                    url.searchParams.set('employee_filter', this.state.selectedEmployee.toString());
+                }
+
+                if (this.state.selectedCaisses.length > 0 || this.state.selectedMonth || this.state.selectedEmployee) {
                     url.searchParams.set('dashboard_filtered', '1');
                 }
-                
+
                 // Mettre à jour l'URL sans rechargement
                 window.history.pushState({}, '', url.toString());
-                // console.log('🔗 SYNCHRONISATION: URL mise à jour sans rechargement:', url.toString());
             }
         } catch (error) {
             // console.error('❌ Erreur mise à jour URL:', error);
         }
     }
-    
+
     setupSearchFilterListener() {
         try {
-            // console.log('🔊 DASHBOARD: Configuration écoute des filtres search');
-            
+
             // Écouter les événements depuis la vue search via window
             if (typeof window !== 'undefined') {
                 window.addEventListener('search-filter-changed', (event) => {
-                    // console.log('🎯 DASHBOARD: Réception filtre depuis search:', event.detail);
                     this.applySearchFilters(event.detail);
                 });
             }
-            
+
             // Écouter aussi via env.bus si disponible
             if (this.env.bus) {
                 this.env.bus.addEventListener('search-filter-changed', (event) => {
-                    // console.log('🎧 DASHBOARD: Réception filtre depuis search via bus:', event.detail);
                     this.applySearchFilters(event.detail);
                 });
             }
-            
+
         } catch (error) {
             // console.error('❌ DASHBOARD: Erreur configuration écoute filtres:', error);
         }
     }
-    
+
     async applySearchFilters(searchFilters) {
         try {
-            // console.log('🔍 DEBUG: applySearchFilters appelé avec:', {
-            //     searchFilters: searchFilters,
-            //     searchFiltersType: typeof searchFilters,
-            //     searchFiltersKeys: searchFilters ? Object.keys(searchFilters) : 'null',
-            //     searchDomain: searchFilters ? searchFilters.searchDomain : 'undefined',
-            //     searchDomainLength: searchFilters && searchFilters.searchDomain ? searchFilters.searchDomain.length : 'N/A',
-            //     isCompleteReset: searchFilters ? searchFilters.isCompleteReset : 'undefined'
-            // });
-            
-            // AJOUT TEMPORAIRE DE DEBUG pour identifier le problème
-            console.log('🔍 DEBUG DASHBOARD: applySearchFilters appelé avec:', {
-                searchFilters: searchFilters,
-                searchFiltersType: typeof searchFilters,
-                searchFiltersKeys: searchFilters ? Object.keys(searchFilters) : 'null',
-                searchDomain: searchFilters ? searchFilters.searchDomain : 'undefined',
-                searchDomainLength: searchFilters && searchFilters.searchDomain ? searchFilters.searchDomain.length : 'N/A',
-                isCompleteReset: searchFilters ? searchFilters.isCompleteReset : 'undefined',
-                generalSearch: searchFilters ? searchFilters.generalSearch : 'undefined',
-                projectIds: searchFilters ? searchFilters.projectIds : 'undefined',
-                timestamp: new Date().toLocaleTimeString()
-            });
-            
-            // TOUJOURS traiter les filtres, même s'ils sont null/undefined/vides
-            // console.log('🔄 DASHBOARD: Application filtres depuis search (incluant réinitialisation):', {
-            //     searchFilters,
-            //     hasSearchFilters: !!searchFilters,
-            //     currentCaisses: this.state.selectedCaisses,
-            //     currentMonth: this.state.selectedMonth,
-            //     hasExternalFilters: !!this.externalFilters
-            // });
-            
+
             // Marquer que nous appliquons des filtres externes
             this.isApplyingExternalFilters = true;
-            
+
             let hasChanges = false;
-            
+
             // LOGIQUE AMÉLIORÉE DE DÉTECTION DE RÉINITIALISATION
             const isCompleteReset = (
-                !searchFilters || 
+                !searchFilters ||
                 searchFilters.isCompleteReset === true ||
                 (searchFilters.searchDomain && searchFilters.searchDomain.length === 0) ||
                 Object.keys(searchFilters || {}).length === 0 ||
-                (searchFilters && !searchFilters.caisseIds && !searchFilters.projectIds && 
-                 !searchFilters.userIds && !searchFilters.expenseType && 
+                (searchFilters && !searchFilters.caisseIds && !searchFilters.projectIds &&
+                !searchFilters.userIds && !searchFilters.projectManagerIds && !searchFilters.expenseType &&
                  !searchFilters.validationStatus && !searchFilters.hasAttachments &&
                  !searchFilters.amountCondition && !searchFilters.generalSearch &&
-                 !searchFilters.dateRange && !searchFilters.monthId)
+                 !searchFilters.dateRange && !searchFilters.monthId && !searchFilters.employeeIds)
             );
-            
-            // console.log('🔍 DEBUG: Détection de réinitialisation:', {
-            //     isCompleteReset,
-            //     hasSearchFilters: !!searchFilters,
-            //     isCompleteResetFlag: searchFilters ? searchFilters.isCompleteReset : 'undefined',
-            //     searchDomainEmpty: searchFilters && searchFilters.searchDomain ? searchFilters.searchDomain.length === 0 : 'N/A'
-            // });
-            
+
+
             // ÉTAPE 1: Réinitialiser TOUS les filtres externes si réinitialisation détectée
             if (isCompleteReset) {
-                // console.log('🧽 DASHBOARD: RÉINITIALISATION COMPLÈTE DÉTECTÉE - Nettoyage de tous les filtres');
-                
+
                 // Réinitialiser tous les filtres externes
+                const hadExternalFilters = this.externalFilters && Object.keys(this.externalFilters).length > 0;
                 this.externalFilters = {};
-                
-                // Réinitialiser les filtres internes
-                if (this.state.selectedCaisses.length > 0 || this.state.selectedMonth || this.state.selectedDate) {
-                    this.state.selectedCaisses = [];
-                    this.state.selectedMonth = null;
-                    this.state.selectedDate = null;
-                    this.state.selectedMonthDetails = null;
+
+                // Réinitialiser les filtres internes SEULEMENT pour les filtres venant de la recherche
+                // Ne pas toucher aux filtres du dropdown dashboard
+                if (hadExternalFilters) {
                     hasChanges = true;
-                    // console.log('🧽 DASHBOARD: Tous les filtres réinitialisés');
                 }
             } else {
                 // ÉTAPE 2: Traiter les filtres normalement
                 if (!this.externalFilters) this.externalFilters = {};
-                
-                // console.log('🔄 DEBUG: Application normale des filtres:', searchFilters);
-                
+
+
                 // Appliquer les filtres de caisse
                 if (searchFilters.caisseIds && Array.isArray(searchFilters.caisseIds) && searchFilters.caisseIds.length > 0) {
                     const newCaisseIds = searchFilters.caisseIds;
-                    if (JSON.stringify(this.state.selectedCaisses.sort()) !== JSON.stringify(newCaisseIds.sort())) {
-                        this.state.selectedCaisses = [...newCaisseIds];
+                    // Store in external filters instead of state to avoid dropdown sync issues
+                    if (JSON.stringify((this.externalFilters.caisseIds || []).sort()) !== JSON.stringify(newCaisseIds.sort())) {
+                        this.externalFilters.caisseIds = [...newCaisseIds];
                         hasChanges = true;
-                        // console.log('✅ DASHBOARD: Filtres caisse appliqués:', newCaisseIds);
-                        
-                        // Quand on change de caisse, réinitialiser le mois
-                        if (this.state.selectedMonth) {
-                            this.state.selectedMonth = null;
-                            this.state.selectedMonthDetails = null;
-                            // console.log('🧽 DASHBOARD: Mois réinitialisé (changement caisse)');
+                    }
+                } else if (searchFilters.generalSearch) {
+                    // Try to resolve general search to caisse IDs
+                    const resolvedIds = await this.resolveCaisseFromSearch(searchFilters.generalSearch);
+                    if (resolvedIds && resolvedIds.length > 0) {
+                        if (JSON.stringify((this.externalFilters.caisseIds || []).sort()) !== JSON.stringify(resolvedIds.sort())) {
+                            this.externalFilters.caisseIds = resolvedIds;
+                            hasChanges = true;
                         }
                     }
                 } else {
                     // Pas de filtre caisse ou filtre vide - réinitialiser
-                    if (this.state.selectedCaisses.length > 0) {
-                        this.state.selectedCaisses = [];
-                        this.state.selectedMonth = null;
-                        this.state.selectedMonthDetails = null;
+                    if (this.externalFilters.caisseIds && this.externalFilters.caisseIds.length > 0) {
+                        delete this.externalFilters.caisseIds;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtres caisse réinitialisés (domaine vide)');
                     }
                 }
-            
+
                 // Appliquer les filtres de projet - NOUVEAU
                 if (searchFilters.projectIds && searchFilters.projectIds.length > 0) {
                     this.externalFilters.projectIds = searchFilters.projectIds;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtres projet appliqués:', searchFilters.projectIds);
                 } else {
                     if (this.externalFilters.projectIds) {
                         delete this.externalFilters.projectIds;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtres projet réinitialisés');
                     }
                 }
-                
-                // Appliquer les filtres d'utilisateur - NOUVEAU
+
+                // Appliquer les filtres d'utilisateur (user_id) - NOUVEAU
                 if (searchFilters.userIds && searchFilters.userIds.length > 0) {
                     this.externalFilters.userIds = searchFilters.userIds;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtres utilisateur appliqués:', searchFilters.userIds);
                 } else {
                     if (this.externalFilters.userIds) {
                         delete this.externalFilters.userIds;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtres utilisateur réinitialisés');
                     }
                 }
-                
+
+                if (searchFilters.projectManagerIds && searchFilters.projectManagerIds.length > 0) {
+                    this.externalFilters.projectManagerIds = searchFilters.projectManagerIds;
+                    hasChanges = true;
+                } else {
+                    if (this.externalFilters.projectManagerIds) {
+                        delete this.externalFilters.projectManagerIds;
+                        hasChanges = true;
+                    }
+                }
+
                 // Appliquer les filtres de type de dépense - NOUVEAU
                 if (searchFilters.expenseType) {
                     this.externalFilters.expenseType = searchFilters.expenseType;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtre type dépense appliqué:', searchFilters.expenseType);
                 } else {
                     if (this.externalFilters.expenseType) {
                         delete this.externalFilters.expenseType;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtre type dépense réinitialisé');
                     }
                 }
-                
+
                 // Appliquer les filtres de validation - NOUVEAU
                 if (searchFilters.validationStatus !== null && searchFilters.validationStatus !== undefined) {
                     this.externalFilters.validationStatus = searchFilters.validationStatus;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtre validation appliqué:', searchFilters.validationStatus);
                 } else {
                     if (this.externalFilters.validationStatus !== undefined) {
                         delete this.externalFilters.validationStatus;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtre validation réinitialisé');
                     }
                 }
-                
+
                 // Appliquer les filtres de pièces jointes - NOUVEAU
                 if (searchFilters.hasAttachments !== null && searchFilters.hasAttachments !== undefined) {
                     this.externalFilters.hasAttachments = searchFilters.hasAttachments;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtre pièces jointes appliqué:', searchFilters.hasAttachments);
                 } else {
                     if (this.externalFilters.hasAttachments !== undefined) {
                         delete this.externalFilters.hasAttachments;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtre pièces jointes réinitialisé');
                     }
                 }
-                
+
                 // Appliquer les filtres de montant - NOUVEAU
                 if (searchFilters.amountCondition) {
                     this.externalFilters.amountCondition = searchFilters.amountCondition;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtre montant appliqué:', searchFilters.amountCondition);
                 } else {
                     if (this.externalFilters.amountCondition) {
                         delete this.externalFilters.amountCondition;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtre montant réinitialisé');
                     }
                 }
-                
+
                 // Appliquer la recherche générale - NOUVEAU
                 if (searchFilters.generalSearch) {
                     this.externalFilters.generalSearch = searchFilters.generalSearch;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Recherche générale appliquée:', searchFilters.generalSearch);
                 } else {
                     if (this.externalFilters.generalSearch) {
                         delete this.externalFilters.generalSearch;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Recherche générale réinitialisée');
                     }
                 }
-                
+
                 // Appliquer les filtres de date - REMIS
                 if (searchFilters.dateRange) {
                     this.externalFilters.dateRange = searchFilters.dateRange;
                     hasChanges = true;
-                    // console.log('✅ DASHBOARD: Filtres date appliqués:', searchFilters.dateRange);
                 } else {
                     if (this.externalFilters.dateRange) {
                         delete this.externalFilters.dateRange;
                         hasChanges = true;
-                        // console.log('🧽 DASHBOARD: Filtres date réinitialisés');
                     }
                 }
-                
+
                 // Appliquer les filtres de mois seulement si on a une caisse
                 if (searchFilters.monthId && this.state.selectedCaisses.length > 0) {
                     if (this.state.selectedMonth !== searchFilters.monthId) {
@@ -979,72 +1140,160 @@ export class ExpenseDashboard extends Component {
                         const monthDetails = this.state.allMonths.find(m => m.id === searchFilters.monthId);
                         this.state.selectedMonthDetails = monthDetails || null;
                         hasChanges = true;
-                        // console.log('✅ DASHBOARD: Filtre mois appliqué:', searchFilters.monthId);
                     }
                 } else if (this.state.selectedMonth && !searchFilters.monthId) {
                     // Réinitialiser si pas de filtre mois
                     this.state.selectedMonth = null;
                     this.state.selectedMonthDetails = null;
                     hasChanges = true;
-                    // console.log('🧽 DASHBOARD: Filtre mois réinitialisé');
+                }
+
+                // Appliquer les filtres d'employé
+                if (searchFilters.employeeIds && searchFilters.employeeIds.length > 0) {
+                    // Prendre le premier employé si plusieurs sont sélectionnés
+                    const employeeId = searchFilters.employeeIds[0];
+                    if (this.state.selectedEmployee !== employeeId) {
+                        this.state.selectedEmployee = employeeId;
+                        hasChanges = true;
+                    }
+                } else if (this.state.selectedEmployee) {
+                    // Réinitialiser si pas de filtre employé
+                    this.state.selectedEmployee = null;
+                    hasChanges = true;
                 }
             }
-            
-            // TOUJOURS recharger les données (même si pas de changements apparents)
-            // pour s'assurer que la réinitialisation soit prise en compte
-            // console.log('🔄 DASHBOARD: Rechargement des données (forcé pour synchronisation):', {
-            //     hasChanges,
-            //     hasExternalFilters: this.externalFilters && Object.keys(this.externalFilters).length > 0,
-            //     selectedCaisses: this.state.selectedCaisses.length
-            // });
-            
+
+
             await this.loadDashboardData();
-            // console.log('✅ DASHBOARD: Données rechargées avec succès');
-            
+
         } catch (error) {
             // console.error('❌ DASHBOARD: Erreur application filtres search:', error);
         } finally {
             // Débloquer après un délai
             setTimeout(() => {
                 this.isApplyingExternalFilters = false;
-                // console.log('🔓 DASHBOARD: Flag externe réinitialisé');
             }, 800);
         }
     }
-    
+
+    async resolveCaisseFromSearch(searchText) {
+        try {
+
+            // Try exact match first
+            const exactMatches = this.state.allCaisses.filter(c => {
+                const caisseName = c.name || '';
+                const userName = (c.user_id && c.user_id[1]) || '';
+                const fullName = `${caisseName} - ${userName}`;
+
+                return fullName.toLowerCase() === searchText.toLowerCase() ||
+                       caisseName.toLowerCase() === searchText.toLowerCase();
+            });
+
+            if (exactMatches.length > 0) {
+                return exactMatches.map(c => c.id);
+            }
+
+            // Try partial match
+            const partialMatches = this.state.allCaisses.filter(c => {
+                const caisseName = (c.name || '').toLowerCase();
+                const userName = (c.user_id && c.user_id[1]) ? c.user_id[1].toLowerCase() : '';
+                const fullName = `${caisseName} - ${userName}`;
+                const searchLower = searchText.toLowerCase();
+
+                return fullName.includes(searchLower) ||
+                       caisseName.includes(searchLower) ||
+                       userName.includes(searchLower);
+            });
+
+            if (partialMatches.length > 0) {
+                return partialMatches.map(c => c.id);
+            }
+
+            return null;
+        } catch (error) {
+            console.error('❌ RESOLVE: Erreur résolution caisse:', error);
+            return null;
+        }
+    }
+
     updateURL() {
         try {
             if (typeof window !== 'undefined' && window.location) {
                 const url = new URL(window.location.href);
-                
+
                 // Supprimer les anciens paramètres
                 url.searchParams.delete('caisse_filter');
                 url.searchParams.delete('month_filter');
+                url.searchParams.delete('employee_filter');
                 url.searchParams.delete('dashboard_filtered');
-                
+
                 // Ajouter les nouveaux si nécessaire
                 if (this.state.selectedCaisses.length > 0) {
                     url.searchParams.set('caisse_filter', this.state.selectedCaisses.join(','));
                 }
-                
+
                 if (this.state.selectedMonth) {
                     url.searchParams.set('month_filter', this.state.selectedMonth.toString());
                 }
-                
-                if (this.state.selectedCaisses.length > 0 || this.state.selectedMonth) {
+
+                if (this.state.selectedEmployee) {
+                    url.searchParams.set('employee_filter', this.state.selectedEmployee.toString());
+                }
+
+                if (this.state.selectedCaisses.length > 0 || this.state.selectedMonth || this.state.selectedEmployee) {
                     url.searchParams.set('dashboard_filtered', '1');
                 }
-                
+
                 // Recharger la page pour appliquer les filtres
                 if (url.toString() !== window.location.href) {
-                    // console.log('🔗 SYNCHRONISATION: Redirection vers:', url.toString());
                     window.location.href = url.toString();
-                } else {
-                    // console.log('🔗 SYNCHRONISATION: URL déjà à jour');
                 }
             }
         } catch (error) {
             // console.error('❌ Erreur mise à jour URL:', error);
+        }
+    }
+
+    async clearAllFilters() {
+        try {
+            console.log('🧹 CLEAR: Effacement de tous les filtres');
+
+            // Désactiver l'auto-sélection pendant le reset
+            this.isAutoSelecting = true;
+
+            // Réinitialiser tous les filtres
+            this.state.selectedCaisses = [];
+            this.state.selectedMonth = null;
+            this.state.selectedMonthDetails = null;
+            this.state.selectedEmployee = null;
+            this.state.selectedDate = null;
+
+            console.log('✅ CLEAR: Filtres réinitialisés');
+
+            // Recharger les données avec les filtres vides
+            await this.loadDashboardData();
+
+            // Émettre l'événement pour réinitialiser la liste
+            this.emitFilterChangeEvent();
+
+            console.log('✅ CLEAR: Dashboard et liste réinitialisés');
+
+            // Libérer le flag après un délai
+            setTimeout(() => {
+                this.isAutoSelecting = false;
+            }, 500);
+
+            // Notification utilisateur (optionnel)
+            if (this.notification) {
+                this.notification.add('Filtres effacés', {
+                    type: 'success',
+                    title: 'Filtres réinitialisés'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Erreur effacement filtres:', error);
+            this.isAutoSelecting = false;
         }
     }
 }

@@ -64,40 +64,6 @@ class HrExpenseAccount(models.Model):
         ('empty', 'Empty')
     ], compute="_compute_status", store=True)
 
-    # Champ de filtrage par mois pour les transactions
-    selected_month_id = fields.Many2one(
-        "hr.expense.account.month",
-        string="Mois sélectionné",
-        help="Mois pour filtrer les transactions",
-        domain="[('caisse_id', '=', id)]"
-    )
-    
-    # Filtre par date (mois/année) pour les statistiques
-    filter_month_year = fields.Date(
-        string="Filtrer par mois",
-        help="Sélectionnez un mois pour filtrer les statistiques",
-        default=lambda self: fields.Date.today().replace(day=1)  # Premier jour du mois courant
-    )
-    
-    # Statistiques filtrées par mois
-    filtered_balance = fields.Float(
-        "Solde du mois",
-        compute="_compute_filtered_statistics",
-        store=False
-    )
-    
-    filtered_total_spent = fields.Float(
-        "Total dépensé du mois",
-        compute="_compute_filtered_statistics", 
-        store=False
-    )
-    
-    filtered_total_replenished = fields.Float(
-        "Total reconstitué du mois",
-        compute="_compute_filtered_statistics",
-        store=False
-    )
-    
     # Champ calculé pour compter le nombre de mois
     month_count = fields.Integer(
         "Nombre de mois",
@@ -111,14 +77,7 @@ class HrExpenseAccount(models.Model):
         compute="_compute_transaction_count",
         store=False
     )
-    
-    # Champ calculé pour les transactions filtrées
-    filtered_expense_account_move_ids = fields.One2many(
-        comodel_name='hr.expense.account.move', 
-        inverse_name='expense_account_id', 
-        string='Transactions Filtrées',
-        compute='_compute_filtered_transactions'
-    )
+
     _sql_constraints = [
         ('unique_employee_id',
          'UNIQUE(employee_id)',
@@ -238,101 +197,6 @@ class HrExpenseAccount(models.Model):
                 account.status = 'warning'
             else:
                 account.status = 'healthy'
-
-    @api.depends('expense_account_move_ids', 'selected_month_id')
-    def _compute_filtered_statistics(self):
-        """Calcule les statistiques filtrées par mois sélectionné"""
-        for account in self:
-            if account.selected_month_id:
-                # Filtrer les transactions du mois sélectionné
-                month_transactions = account.expense_account_move_ids.filtered(
-                    lambda t: t.caisse_mois_id == account.selected_month_id
-                )
-                
-                # Calculer les totaux du mois
-                month_replenishments = sum(month_transactions.filtered(
-                    lambda x: x.expense_move_type == 'replenish'
-                ).mapped('total_amount'))
-                
-                month_expenses = sum(month_transactions.filtered(
-                    lambda x: x.expense_move_type == 'spent'
-                ).mapped('total_amount'))
-                
-                account.filtered_total_replenished = month_replenishments
-                account.filtered_total_spent = month_expenses
-                
-                # Pour le solde filtré, utiliser directement le solde du mois sélectionné
-                account.filtered_balance = account.selected_month_id.sold if account.selected_month_id else 0
-            else:
-                # Si aucun filtre, utiliser les totaux généraux
-                account.filtered_total_replenished = account.total_replenished
-                account.filtered_total_spent = account.total_spent
-                account.filtered_balance = account.balance
-            
-    @api.depends('expense_account_move_ids', 'selected_month_id')
-    def _compute_filtered_transactions(self):
-        """Calcule les transactions filtrées selon le mois sélectionné"""
-        for account in self:
-            transactions = account.expense_account_move_ids
-            
-            # Filtrer par selected_month_id
-            if account.selected_month_id:
-                transactions = transactions.filtered(
-                    lambda t: t.caisse_mois_id == account.selected_month_id
-                )
-            
-            account.filtered_expense_account_move_ids = transactions
-
-    @api.onchange('selected_month_id')
-    def _onchange_filters(self):
-        """Déclenche la mise à jour quand les filtres changent"""
-        # Force le recalcul des transactions filtrées et des statistiques
-        self._compute_filtered_transactions()
-        self._compute_filtered_statistics()
-
-    def action_clear_month_filter(self):
-        """Efface le filtre de mois et recharge la vue"""
-        self.ensure_one()
-        
-        # Effacer le filtre de mois
-        self.write({
-            'selected_month_id': False
-        })
-        
-        # Recharger la vue pour assurer la mise à jour
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'hr.expense.account',
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'current',
-            'context': {
-                'active_id': self.id,
-                'active_model': 'hr.expense.account',
-            }
-        }
-    
-    def action_clear_all_filters(self):
-        """Efface tous les filtres et recharge la vue"""
-        self.ensure_one()
-        
-        # Effacer tous les filtres
-        self.write({
-            'selected_month_id': False
-        })
-        
-        # Recharger la vue pour assurer la mise à jour
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'hr.expense.account',
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'current',
-            'context': {
-                'active_id': self.id,
-                'active_model': 'hr.expense.account',
-            }
-        }
 
     @api.depends('month_ids')
     def _compute_month_count(self):
@@ -457,6 +321,7 @@ class HrExpenseAccount(models.Model):
                 'type': 'success'
             }
         }
+        
     @api.model
     def get_dashboard_stats(self, selected_caisse_ids=None):
         """Méthode pour récupérer les statistiques du dashboard"""
@@ -615,4 +480,3 @@ class HrExpenseAccount(models.Model):
                     'type': 'danger'
                 }
             }
-

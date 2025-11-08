@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 
 const LoginPage: React.FC = () => {
-  const { isAuthenticated, login: userAuthLogin, error: authError } = useUserAuth();
+  const { isAuthenticated, login: userAuthLogin, error: authError, clearError } = useUserAuth();
   const [serverUrl, setServerUrl] = useState('');
   const [serverConfig, setServerConfig] = useState(null);
   const [formData, setFormData] = useState({
@@ -28,6 +28,14 @@ const LoginPage: React.FC = () => {
   const [isConnectingServer, setIsConnectingServer] = useState(false);
   const [isServerConnected, setIsServerConnected] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Nettoyer les erreurs au montage
+  useEffect(() => {
+    clearError();
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   // Si déjà authentifié, AuthGuard se charge de la redirection
 
@@ -40,7 +48,6 @@ const LoginPage: React.FC = () => {
     setIsConnectingServer(true);
 
     try {
-      console.log('🔍 Connexion au serveur:', serverUrl);
       
       // Étape 1: Récupérer la configuration du serveur
       const configResult = await authService.fetchAndConfigureServer(serverUrl);
@@ -53,17 +60,25 @@ const LoginPage: React.FC = () => {
           'Connexion réussie', 
           `Serveur connecté!\n\nVersion Odoo: ${configResult.config.odoo_version}\nAPI Version: ${configResult.config.api_version}`
         );
-        
-        console.log('✅ Configuration serveur récupérée:', configResult.config);
       } else {
         throw new Error(configResult.error || 'Configuration serveur invalide');
       }
       
     } catch (error) {
-      console.error('❌ Erreur connexion serveur:', error);
+      
+      // Réinitialiser les champs en cas d'erreur
+      setIsServerConnected(false);
+      setServerConfig(null);
+      
       Alert.alert(
         'Erreur serveur', 
-        error instanceof Error ? error.message : 'Impossible de se connecter au serveur'
+        error instanceof Error ? error.message : 'Impossible de se connecter au serveur.\n\nVeuillez vérifier l\'URL et votre connexion internet.',
+        [
+          {
+            text: 'Réessayer',
+            onPress: () => {}
+          }
+        ]
       );
     } finally {
       setIsConnectingServer(false);
@@ -86,39 +101,53 @@ const LoginPage: React.FC = () => {
     setIsLoggingIn(true);
 
     try {
-      console.log('🔐 Début authentification...');
-      
-      // S'assurer que la configuration du serveur est bien faite avant l'auth
-      console.log('🔧 Configuration du serveur avec URL:', serverUrl);
-      const configResult = await authService.fetchAndConfigureServer(serverUrl);
-      if (!configResult.success) {
-        throw new Error(configResult.error || 'Configuration serveur impossible');
-      }
-      
-      console.log('✅ Configuration du serveur terminée, début authentification...');
-      
       // Utiliser UserAuth login
       const success = await userAuthLogin(
         formData.username,
         formData.password,
-        formData.db
+        formData.db,
+        serverUrl
       );
       
       if (success) {
-        console.log('✅ Authentification réussie - AuthGuard va gérer la redirection...');
-        // Le AuthGuard détectera automatiquement le changement d'état
-        // et redirigera vers /(tabs)
+        // AuthGuard gère la redirection
       } else {
+        // Authentification échouée - Réinitialiser l'état
         const errorMessage = authError || 'Identifiants incorrects';
-        Alert.alert('Erreur', errorMessage);
-        console.log('❌ Authentification échouée:', errorMessage);
+        
+        // Réinitialiser le formulaire
+        setFormData({ username: '', password: '', db: 'odoo' });
+        setIsServerConnected(false);
+        setServerConfig(null);
+        
+        Alert.alert(
+          'Erreur d\'authentification', 
+          errorMessage + '\n\nVeuillez vérifier vos identifiants et réessayer.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {}
+            }
+          ]
+        );
       }
       
     } catch (error) {
-      console.error('❌ Erreur authentification:', error);
+      
+      // Réinitialiser le formulaire
+      setFormData({ username: '', password: '', db: 'odoo' });
+      setIsServerConnected(false);
+      setServerConfig(null);
+      
       Alert.alert(
-        'Erreur', 
-        error instanceof Error ? error.message : 'Erreur de connexion'
+        'Erreur de connexion', 
+        error instanceof Error ? error.message : 'Erreur de connexion au serveur.\n\nVeuillez vérifier votre connexion et réessayer.',
+        [
+          {
+            text: 'Réessayer',
+            onPress: () => {}
+          }
+        ]
       );
     } finally {
       setIsLoggingIn(false);
